@@ -1,0 +1,102 @@
+<?xml version="1.0"?>
+<configuration>
+	<placeholders>
+		<placeholder id="template_name">Salesforce to MS Dynamics Account bidirectional sync</placeholder>
+	</placeholders>
+	<sections>
+		<section id="use_case">
+As an admin, I want to have my accounts synchronized between two different systems - Salesforce and MS Dynamics.
+
+**Template overview** <a name="templateoverview"/>
+
+Let's say we want to keep Salesforce instance synchronized with MS Dynamics instance. Then, the integration behavior can be summarized just with the following steps:
+
+1. Ask Salesforce:
+> *Which changes have there been since the last time I got in touch with you?*
+
+2. For each of the updates fetched in the previous step (1.), ask MS Dynamics:
+> *Does the update received from Salesforce should be applied?*
+
+3. If MS Dynamics answer for the previous question (2.) is *Yes*, then *upsert* (create or update depending each particular case) MS Dynamics with the belonging change.
+
+4. Repeat previous steps (1. to 3.) the other way around (using MS Dynamics as source instance and Salesforce as the target one)
+
+ Repeat *ad infinitum*:
+
+5. Ask Salesforce:
+> *Which changes have there been since the question I've made in the step 1.?*
+
+And so on...
+  
+  
+The question for recent changes since a certain moment in nothing but a [poll inbound][1] with a [watermark][2] defined.
+		</section>
+		<section id="considerations">
+<![CDATA[
+To make this Anypoint Template run, there are certain preconditions that must be considered. All of them deal with the preparations in both, that must be made in order for all to run smoothly. **Failling to do so could lead to unexpected behavior of the template.**
+]]>
+		</section>
+		<section id="run_it">
+<![CDATA[
+See below.
+]]>
+		</section>
+		<section id="application_configuration">
+		<![CDATA[
+**Application configuration**
++ polling.frequency `10000`  
+This are the miliseconds (also different time units can be used) that will run between two different checks for updates in Salesforce and MS Dynamics
+
++ watermark.default.expression `2014-02-25T11:00:00.000Z`  
+This property is an important one, as it configures what should be the start point of the synchronization.The date format accepted in SFDC Query Language is either *YYYY-MM-DDThh:mm:ss+hh:mm* or you can use Constants. [More information about Dates in SFDC](http://www.salesforce.com/us/developer/docs/officetoolkit/Content/sforce_api_calls_soql_select_dateformats.htm)
+
+**SalesForce Connector configuration for company A**
++ sfdc.username `salesforce.user@mail.com`
++ sfdc.password `salesforcePass`
++ sfdc.securityToken `wJFJAf6lw3vH86bDLWSjpfJC`
++ sfdc.url `https://login.salesforce.com/services/Soap/u/32.0`
++ sfdc.integration.user.id `00520000003LtvGAAS`
++ sfdc.watermark.default.expression `#[groovy: new Date(System.currentTimeMillis() - 10000).format("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone.getTimeZone('GMT'))]`
+
+**MS Dynamics Connector configuration for company B**
++ msdyn.username `msDynamicsUser@@yourOrg.onmicrosoft.com`
++ msdyn.password `msDynamicsPass`
++ msdyn.url `https://htesting.api.crm4.dynamics.com/XRMServices/2011/Organization.svc`
++ msdyn.watermark.default.expression `#[groovy: new Date(System.currentTimeMillis() - 10000).format("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone.getTimeZone('GMT'))]`
++ msdyn.integration.user.id `534679675`
++ msdyn.integration.ownerid `534679675`
+
+]]>
+		</section>
+		<section id="api_calls">
+		<![CDATA[
+Salesforce imposes limits on the number of API Calls that can be made. Therefore calculating this amount may be an important factor to consider. The template calls to the API can be calculated using the formula:
+
+***1 + X + X / 200***
+
+Being ***X*** the number of Accounts to be synchronized on each run. 
+
+The division by ***200*** is because, by default, Accounts are gathered in groups of 200 for each Upsert API Call in the commit step. Also consider that this calls are executed repeatedly every polling cycle.	
+
+For instance if 10 records are fetched from origin instance, then 12 api calls will be made (1 + 10 + 1).
+]]>
+		</section>
+		<section id="default_endpoints_xml">
+		<![CDATA[
+This is the file where you will found the inbound and outbound sides of your integration app. These flows has Exception Strategy that basically consists on invoking the *defaultChoiseExceptionStrategy* defined in *errorHandling.xml* file.
+It is intented to define the application API.
+]]>
+		</section>
+		<section id="default_business_logic_xml">
+		<![CDATA[
+Functional aspect of the Template is implemented in this XML, directed by one flow responsible of excecuting the logic.
+For the purpose of this particular Template there are two [Batch Jobs](http://www.mulesoft.org/documentation/display/current/Batch+Processing). which handles all the logic of it. 
+The first *fromSalesforceBatch* batch job is called for synchranization of Accounts from Salesforce to MS Dynamics. 
+If the Account already exists in MS Dynamics, the last modified date are compared and according to the result, the Account is updated or not. 
+On the other hand, if the Account does not exist, it is created.
+The second *fromDynamicsCrmBatch* batch job works in the same way, but in the opposite direction.
+
+]]>
+		</section>
+	</sections>
+</configuration>
