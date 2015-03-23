@@ -1,10 +1,11 @@
 
-# Anypoint Template: Salesforce to Salesforce Contact Aggregation
+# Anypoint Template: Salesforce to MS Dynamics Account bidirectional sync
 
 + [License Agreement](#licenseagreement)
 + [Use Case](#usecase)
 + [Considerations](#considerations)
 	* [Salesforce Considerations](#salesforceconsiderations)
+	* [Microsoft Dynamics CRM Considerations](#msdynamicsconsiderations)
 + [Run it!](#runit)
 	* [Running on premise](#runonopremise)
 	* [Running on Studio](#runonstudio)
@@ -25,17 +26,36 @@ Note that using this template is subject to the conditions of this [License Agre
 Please review the terms of the license before downloading and using this template. In short, you are allowed to use the template for free with Mule ESB Enterprise Edition, CloudHub, or as a trial in Anypoint Studio.
 
 # Use Case <a name="usecase"/>
-As a Salesforce admin I want to aggregate contacts from two Salesforce Instances and compare them to see which contacts can only be found in one of the two and which contacts are in both instances. 
+As an admin, I want to have my accounts synchronized between two different systems - Salesforce and MS Dynamics.
 
-For practical purposes this Template will generate the result in the format of a CSV Report sent by mail.
+**Template overview** 
 
-This Template should serve as a foundation for extracting data from two systems, aggregating data, comparing values of fields for the objects, and generating a report on the differences. 
+Let's say we want to keep Salesforce instance synchronized with MS Dynamics instance. Then, the integration behavior can be summarized just with the following steps:
 
-As implemented, it gets contacts from two instances of Salesforce, compares by the email address of the contacts, and generates a CSV file which shows contact in A, contact in B, and contacts in A and B. The report is then send the email to a configured group of email addresses.
+1. Ask Salesforce:
+> *Which changes have there been since the last time I got in touch with you?*
+
+2. For each of the updates fetched in the previous step (1.), ask MS Dynamics:
+> *Does the update received from Salesforce should be applied?*
+
+3. If MS Dynamics answer for the previous question (2.) is *Yes*, then *upsert* (create or update depending each particular case) MS Dynamics with the belonging change.
+
+4. Repeat previous steps (1. to 3.) the other way around (using MS Dynamics as source instance and Salesforce as the target one)
+
+ Repeat *ad infinitum*:
+
+5. Ask Salesforce:
+> *Which changes have there been since the question I've made in the step 1.?*
+
+And so on...
+  
+  
+The question for recent changes since a certain moment in nothing but a [poll inbound][1] with a [watermark][2] defined.
 
 # Considerations <a name="considerations"/>
 
-To make this Anypoint Template run, there are certain preconditions that must be considered. All of them deal with the preparations in both, that must be made in order for all to run smoothly. **Failling to do so could lead to unexpected behavior of the template.**
+To make this Anypoint Template run, there are certain preconditions that must be considered. All of them deal with the preparations in both, that must be made in order for all to run smoothly. 
+**Failling to do so could lead to unexpected behavior of the template.**
 
 
 
@@ -84,21 +104,27 @@ There are no particular considerations for this Anypoint Template regarding Sale
 
 
 
-# Run it! <a name="runit"/>
-Simple steps to get Salesforce to Salesforce Contact Aggregation running.
-In any of the ways you would like to run this Anypoint Template, here is an example of the output you'll see after hitting the HTTP endpoint:
 
-<pre>
-<h1>Batch Process initiated</h1>
-<b>ID:</b>6eea3cc6-7c96-11e3-9a65-55f9f3ae584e<br/>
-<b>Records to Be Processed: </b>9<br/>
-<b>Start execution on: </b>Mon Jan 13 18:05:33 GMT-03:00 2014
-</pre>
+## Microsoft Dynamics CRM Considerations <a name="msdynamicsconsiderations"/>
+
+### As source of data
+
+There is need to define custom field **new_salesforceid** for Accounts in the system.
+
+There are no other particular considerations for this Anypoint Template regarding Microsoft Dynamics CRM as data origin.
+### As destination of data
+
+There is need to define custom field **new_salesforceid** for Accounts in the system.
+
+There are no other particular considerations for this Anypoint Template regarding Microsoft Dynamics CRM as data origin.
+
+
+# Run it! <a name="runit"/>
+Simple steps to get Salesforce to MS Dynamics Account bidirectional sync running.
+See below.
 
 ## Running on premise <a name="runonopremise"/>
-Complete all properties in one of the property files, for example in [mule.prod.properties] (../blob/master/src/main/resources/mule.prod.properties) and run your app with the corresponding environment variable to use it. To follow the example, this will be `mule.env=prod`.
-
-After this, to trigger the use case you just need to hit the local http endpoint with the port you configured in your file. If this is, for instance, `9090` then you should hit: `http://localhost:9090/generatereport` and this will create a CSV report and send it to the mails set.
+In this section we detail the way you should run your Anypoint Template on your computer.
 
 
 ### Where to Download Mule Studio and Mule ESB
@@ -135,7 +161,7 @@ Complete all properties in one of the property files, for example in [mule.prod.
 
 ## Running on CloudHub <a name="runoncloudhub"/>
 While [creating your application on CloudHub](http://www.mulesoft.org/documentation/display/current/Hello+World+on+CloudHub) (Or you can do it later as a next step), you need to go to Deployment > Advanced to set all environment variables detailed in **Properties to be configured** as well as the **mule.env**.
-Once your app is all set and started, supposing you choose as domain name `sfdccontactaggregation` to trigger the use case you just need to hit `http://sfdccontactaggregation.cloudhub.io/generatereport` and the report will be sent to the emails configured.
+
 
 ### Deploying your Anypoint Template on CloudHub <a name="deployingyouranypointtemplateoncloudhub"/>
 Mule Studio provides you with really easy way to deploy your Template directly to CloudHub, for the specific steps to do so please check this [link](http://www.mulesoft.org/documentation/display/current/Deploying+Mule+Applications#DeployingMuleApplications-DeploytoCloudHub)
@@ -144,41 +170,37 @@ Mule Studio provides you with really easy way to deploy your Template directly t
 ## Properties to be configured (With examples) <a name="propertiestobeconfigured"/>
 In order to use this Mule Anypoint Template you need to configure properties (Credentials, configurations, etc.) either in properties file or in CloudHub as Environment Variables. Detail list with examples:
 ### Application configuration
-+ http.port `9090` 
+**Application configuration**
++ polling.frequency `10000`  
+This are the miliseconds (also different time units can be used) that will run between two different checks for updates in Salesforce and MS Dynamics
 
-### Salesforce Connector configuration for company A
-+ sfdc.a.username `bob.dylan@orga`
-+ sfdc.a.password `DylanPassword123`
-+ sfdc.a.securityToken `avsfwCUl7apQs56Xq2AKi3X`
-+ sfdc.a.url `https://login.salesforce.com/services/Soap/u/26.0`
++ watermark.default.expression `2014-02-25T11:00:00.000Z`  
+This property is an important one, as it configures what should be the start point of the synchronization.The date format accepted in SFDC Query Language is either *YYYY-MM-DDThh:mm:ss+hh:mm* or you can use Constants. [More information about Dates in SFDC](http://www.salesforce.com/us/developer/docs/officetoolkit/Content/sforce_api_calls_soql_select_dateformats.htm)
 
-### Salesforce Connector configuration for company B
-+ sfdc.b.username `joan.baez@orgb`
-+ sfdc.b.password `JoanBaez456`
-+ sfdc.b.securityToken `ces56arl7apQs56XTddf34X`
-+ sfdc.b.url `https://login.salesforce.com/services/Soap/u/26.0`
+**SalesForce Connector configuration for company A**
++ sfdc.username `salesforce.user@mail.com`
++ sfdc.password `salesforcePass`
++ sfdc.securityToken `wJFJAf6lw3vH86bDLWSjpfJC`
++ sfdc.url `https://login.salesforce.com/services/Soap/u/32.0`
++ sfdc.integration.user.id `00520000003LtvGAAS`
++ sfdc.watermark.default.expression `#[groovy: new Date(System.currentTimeMillis() - 10000).format("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone.getTimeZone('GMT'))]`
 
-### SMPT Services configuration
-+ smtp.host `smtp.gmail.com`
-+ smtp.port `587`
-+ smtp.user `exampleuser@gmail.com`
-+ smtp.password `ExamplePassword456`
-
-### Mail details
-+ mail.from `exampleuser@gmail.com`
-+ mail.to `woody.guthrie@gmail.com`
-+ mail.subject `SFDC Contacts Report`
-+ mail.body `Contacts report comparing contacts from SFDC Accounts`
-+ attachment.name `OrderedReport.csv`
+**MS Dynamics Connector configuration for company B**
++ dynamicscrm.username `msDynamicsUser@@yourOrg.onmicrosoft.com`
++ dynamicscrm.password `msDynamicsPass`
++ dynamicscrm.url `https://htesting.api.crm4.dynamics.com/XRMServices/2011/Organization.svc`
++ dynamicscrm.watermark.default.expression `#[groovy: new Date(System.currentTimeMillis() - 10000).format("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone.getTimeZone('GMT'))]`
++ dynamicscrm.integration.user.id `534679675`
++ dynamicscrm.integration.ownerid `534679675`
 
 # API Calls <a name="apicalls"/>
-Salesforce imposes limits on the number of API Calls that can be made. Therefore calculating this amount may be an important factor to consider. The Anypoint Template calls to the API can be calculated using the formula:
+Salesforce imposes limits on the number of API Calls that can be made. Therefore calculating this amount may be an important factor to consider. The template calls to the API can be calculated using the formula:
 
 ***1 + X + X / 200***
 
-Being ***X*** the number of Contacts to be synchronized on each run. 
+Being ***X*** the number of Accounts to be synchronized on each run. 
 
-The division by ***200*** is because, by default, Contacts are gathered in groups of 200 for each Upsert API Call in the commit step. Also consider that this calls are executed repeatedly every polling cycle.	
+The division by ***200*** is because, by default, Accounts are gathered in groups of 200 for each Upsert API Call in the commit step. Also consider that this calls are executed repeatedly every polling cycle.	
 
 For instance if 10 records are fetched from origin instance, then 12 api calls will be made (1 + 10 + 1).
 
@@ -203,48 +225,18 @@ In the visual editor they can be found on the *Global Element* tab.
 
 
 ## businessLogic.xml<a name="businesslogicxml"/>
-Functional aspect of the Template is implemented on this XML, directed by one flow responsible of conducting the aggregation of data, comparing records and finally formating the output, in this case being a report.
-The *mainFlow* organises the job in three different steps and finally invokes the *outboundFlow* that will deliver the report to the corresponding outbound endpoint.
-This flow has Exception Strategy that basically consists on invoking the *defaultChoiseExceptionStrategy* defined in *errorHandling.xml* file.
-
-**Gather Data Flow**
-Mainly consisting of two calls (Queries) to Salesforce and storing each response on the Invocation Variable named *contactsFromOrgA* or *contactsFromOrgA* accordingly.
-
-**Aggregation Flow**
-[Java Transformer](http://www.mulesoft.org/documentation/display/current/Java+Transformer+Reference) responsible for aggregating the results from the two Salesforce Org Contacts.
-Criteria and format applied:
-+ Transformer receives a Mule Message with the two Invocation variables *contactsFromOrgA* and *contactsFromOrgB* to result in List of Maps with keys: **Name**, **Email**, **IDInA** and **IDInB**.
-+ Contacts will be matched by mail, that is to say, a record in both SFDC organisations with same mail is considered the same contact.
-
-**Format Output Flow
-+ [Java Transformer](http://www.mulesoft.org/documentation/display/current/Java+Transformer+Reference) responsible for sorting the list of contacts in the following order:
-
-1. Contacts only in Org A
-2. Contacts only in Org B
-3. Contacts in both Org A and Org B
-
-All records ordered alphabetically by mail within each category.
-If you want to change this order then the *compare* method should be modified.
-
-+ CSV Report [DataMapper](http://www.mulesoft.org/documentation/display/current/Datamapper+User+Guide+and+Reference) transforming the List of Maps in CSV with headers **Name**, **Email**, **IDInA**, and **IDInB**.
-+ An [Object to string transformer](http://www.mulesoft.org/documentation/display/current/Transformers) is used to set the payload as an String.
+Functional aspect of the Template is implemented in this XML, directed by one flow responsible of excecuting the logic.
+For the purpose of this particular Template there are two [Batch Jobs](http://www.mulesoft.org/documentation/display/current/Batch+Processing). which handles all the logic of it. 
+The first *fromSalesforceBatch* batch job is called for synchranization of Accounts from Salesforce to MS Dynamics. 
+If the Account already exists in MS Dynamics, the last modified date are compared and according to the result, the Account is updated or not. 
+On the other hand, if the Account does not exist, it is created.
+The second *fromDynamicsCrmBatch* batch job works in the same way, but in the opposite direction.
 
 
 
 ## endpoints.xml<a name="endpointsxml"/>
-This is the file where you will found the inbound and outbound sides of your integration app.
-This Template has an [HTTP Inbound Endpoint](http://www.mulesoft.org/documentation/display/current/HTTP+Endpoint+Reference) as the way to trigger the use case and an [SMTP Transport](http://www.mulesoft.org/documentation/display/current/SMTP+Transport+Reference) as the outbound way to send the report.
-
-**Trigger Flow**
-**HTTP Inbound Endpoint** - Start Report Generation
-+ `${http.port}` is set as a property to be defined either on a property file or in CloudHub environment variables.
-+ The path configured by default is `generatereport` and you are free to change for the one you prefer.
-+ The host name for all endpoints in your CloudHub configuration should be defined as `localhost`. CloudHub will then route requests from your application domain URL to the endpoint.
-
-**Outbound Flow**
-**SMTP Outbound Endpoint** - Send Mail
-+ Both SMTP Server configuration and the actual mail to be sent are defined in this endpoint.
-+ This flow is going to be invoked from the flow that does all the functional work: *mainFlow*, the same that is invoked from the Inbound Flow upon triggering of the HTTP Endpoint.
+This is the file where you will found the inbound and outbound sides of your integration app. These flows has Exception Strategy that basically consists on invoking the *defaultChoiseExceptionStrategy* defined in *errorHandling.xml* file.
+It is intented to define the application API.
 
 
 

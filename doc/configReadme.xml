@@ -33,7 +33,25 @@ The question for recent changes since a certain moment in nothing but a [poll in
 		</section>
 		<section id="considerations">
 <![CDATA[
-To make this Anypoint Template run, there are certain preconditions that must be considered. All of them deal with the preparations in both, that must be made in order for all to run smoothly. **Failling to do so could lead to unexpected behavior of the template.**
+To make this Anypoint Template run, there are certain preconditions that must be considered. All of them deal with the preparations in both, that must be made in order for all to run smoothly. 
+**Failling to do so could lead to unexpected behavior of the template.**
+]]>
+</section>
+
+<section id="msdyn_src">
+<![CDATA[
+
+There is need to define custom field **new_salesforceid** for Accounts in the system.
+
+There are no other particular considerations for this Anypoint Template regarding Microsoft Dynamics CRM as data origin.
+]]>
+		</section>
+<section id="msdyn_dst">
+<![CDATA[
+
+There is need to define custom field **new_salesforceid** for Accounts in the system.
+
+There are no other particular considerations for this Anypoint Template regarding Microsoft Dynamics CRM as data origin.
 ]]>
 		</section>
 		<section id="run_it">
@@ -59,12 +77,12 @@ This property is an important one, as it configures what should be the start poi
 + sfdc.watermark.default.expression `#[groovy: new Date(System.currentTimeMillis() - 10000).format("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone.getTimeZone('GMT'))]`
 
 **MS Dynamics Connector configuration for company B**
-+ msdyn.username `msDynamicsUser@@yourOrg.onmicrosoft.com`
-+ msdyn.password `msDynamicsPass`
-+ msdyn.url `https://htesting.api.crm4.dynamics.com/XRMServices/2011/Organization.svc`
-+ msdyn.watermark.default.expression `#[groovy: new Date(System.currentTimeMillis() - 10000).format("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone.getTimeZone('GMT'))]`
-+ msdyn.integration.user.id `534679675`
-+ msdyn.integration.ownerid `534679675`
++ dynamicscrm.username `msDynamicsUser@@yourOrg.onmicrosoft.com`
++ dynamicscrm.password `msDynamicsPass`
++ dynamicscrm.url `https://htesting.api.crm4.dynamics.com/XRMServices/2011/Organization.svc`
++ dynamicscrm.watermark.default.expression `#[groovy: new Date(System.currentTimeMillis() - 10000).format("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone.getTimeZone('GMT'))]`
++ dynamicscrm.integration.user.id `534679675`
++ dynamicscrm.integration.ownerid `534679675`
 
 ]]>
 		</section>

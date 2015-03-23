@@ -9,7 +9,6 @@ package org.mule.templates.integration;
 import static org.mule.templates.builders.ObjectBuilder.anAccount;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +23,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mule.MessageExchangePattern;
-import org.mule.api.MuleEvent;
 import org.mule.api.MuleException;
 import org.mule.api.lifecycle.InitialisationException;
 import org.mule.processor.chain.InterceptingChainLifecycleWrapper;
@@ -73,8 +71,8 @@ public class BidirectionalAccountSyncIT extends AbstractTemplatesTestCase {
 		DateTimeFormatter dateFormat = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 		System.setProperty("sfdc.watermark.default.expression",	now.toString(dateFormat));
 		
-		System.clearProperty("msdyn.watermark.default.expression");
-		System.setProperty("msdyn.watermark.default.expression", now.toString(dateFormat));		
+		System.clearProperty("dynamicscrm.watermark.default.expression");
+		System.setProperty("dynamicscrm.watermark.default.expression", now.toString(dateFormat));		
 	}
 
 	@Before
@@ -113,11 +111,11 @@ public class BidirectionalAccountSyncIT extends AbstractTemplatesTestCase {
 		deleteAccountFromBFlow.initialise();
 
 		// Flow for querying the account in A instance
-		queryAccountFromAFlow = getSubFlow("queryAccountFromAFlow");
+		queryAccountFromAFlow = getSubFlow("retrieveAccountFromAFlow");
 		queryAccountFromAFlow.initialise();
 
 		// Flow for querying the account in B instance
-		queryAccountFromBFlow = getSubFlow("queryAccountFromBFlow");
+		queryAccountFromBFlow = getSubFlow("retrieveAccountFromBFlow");
 		queryAccountFromBFlow.initialise();
 	}
 
@@ -133,23 +131,24 @@ public class BidirectionalAccountSyncIT extends AbstractTemplatesTestCase {
 			idList.add(account);
 		}
 		deleteAccountFromBFlow.process(getTestEvent(idList,	MessageExchangePattern.REQUEST_RESPONSE));
+		accountsCreatedInA.clear();
+		accountsCreatedInB.clear();
 	}
 	
 	@Test
-	public void whenUpdatingAnAccountInInstanceBTheBelongingAccountGetsUpdatedInInstanceA()
-			throws MuleException, Exception {
+	public void whenUpdatingAnAccountInInstanceBTheBelongingAccountGetsUpdatedInInstanceA() throws MuleException, Exception {
 
 		// Build test accounts
 		final String accountName = ANYPOINT_TEMPLATE_NAME + "-" + System.currentTimeMillis() + "Account";
 		ObjectBuilder accountInA = anAccount()
 				.with("Name", accountName)
 				.with("Phone", "123456789")
-				.with("Description", "Old description");
+				.with("Description", "Old description SFDC");
 		
 		ObjectBuilder accountInB = anAccount()
 				.with("name", accountName)
 				.with("telephone1", "123456789")
-				.with("description", "Some nice description");
+				.with("description", "Some nice description MS Dyn");
 
 		// Create accounts in sand-boxes and keep track of them for posterior
 		// cleaning up
@@ -165,11 +164,44 @@ public class BidirectionalAccountSyncIT extends AbstractTemplatesTestCase {
 
 		// Assertions
 		Map<String, String> retrievedAccountFromA = (Map<String, String>) queryAccount(accountInA.build(), queryAccountFromAFlow);
-		Map<String, String> retrievedAccountFromB = (Map<String, String>) queryAccount(accountInB.build(), queryAccountFromBFlow);
 		
+		Iterator<?> it = (Iterator<?>) queryAccount(accountInB.build(), queryAccountFromBFlow);
+		Map<String, String> retrievedAccountFromB = (Map<String, String>)it.next();
+		
+		Assert.assertEquals("Names of accounts are not synchronized between systems.", retrievedAccountFromA.get("Name"), retrievedAccountFromB.get("name"));
+		Assert.assertEquals("Phones of accounts are not synchronized between systems.", retrievedAccountFromA.get("Phone"), retrievedAccountFromB.get("telephone1"));
+		Assert.assertEquals("Descriptions of accounts are not synchronized between systems.", retrievedAccountFromA.get("Description"), retrievedAccountFromB.get("description"));
+		
+}
+	
+	@Test
+	public void whenNewnAccountInInstanceAIsCreatedTheNewAccountInInstanceBShouldBeCreatedToo() throws MuleException, Exception {
 
-		retrievedAccountFromA.remove("Id");
-		retrievedAccountFromB.remove("accountid");
+		// Build test accounts
+		final String accountName = ANYPOINT_TEMPLATE_NAME + "-" + System.currentTimeMillis() + "Account";
+		ObjectBuilder accountInA = anAccount()
+				.with("Name", accountName)
+				.with("Phone", "123456789")
+				.with("Description", "Some nice description SFDC");
+		
+		ObjectBuilder accountInB = anAccount()
+				.with("name", accountName)
+				.with("telephone1", "123456789")
+				.with("description", "Old description MS Dyn");		
+		
+		// Create account in sand-box and keep track of it for posterior
+		// cleaning up		     
+		accountsCreatedInA.add(createTestAccountsInSfdcSandbox(accountInA.build(), createAccountInAFlow));
+		
+		// Execution
+		executeWaitAndAssertBatchJob(A_INBOUND_FLOW_NAME);
+
+		// Assertions
+		Map<String, String> retrievedAccountFromA = (Map<String, String>) queryAccount(accountInA.build(), queryAccountFromAFlow);
+		
+		Iterator<?> it = (Iterator<?>) queryAccount(accountInB.build(), queryAccountFromBFlow);
+		Map<String, String> retrievedAccountFromB = (Map<String, String>)it.next();
+		accountsCreatedInB.add(retrievedAccountFromB.get("accountid"));
 		
 		Assert.assertEquals("Names of accounts are not synchronized between systems.", retrievedAccountFromA.get("Name"), retrievedAccountFromB.get("name"));
 		Assert.assertEquals("Phones of accounts are not synchronized between systems.", retrievedAccountFromA.get("Phone"), retrievedAccountFromB.get("telephone1"));
@@ -199,10 +231,12 @@ public class BidirectionalAccountSyncIT extends AbstractTemplatesTestCase {
 		List<Map<String, Object>> msDynAccounts = new ArrayList<Map<String, Object>>();
 		msDynAccounts.add(account);
 
-		final MuleEvent event = createAccountFlow.process(getTestEvent(msDynAccounts, MessageExchangePattern.REQUEST_RESPONSE));
-		HashMap<?,?> msDynAccountMap = (HashMap<?,?>) ((Iterator<?>) event.getMessage().getPayload()).next();
+		createAccountFlow.process(getTestEvent(msDynAccounts, MessageExchangePattern.REQUEST_RESPONSE));		
 		
-		return (String) msDynAccountMap.get("accountid");
+		Iterator<?> it = (Iterator<?>) queryAccount(account, queryAccountFromBFlow);
+		Map<String, String> retrievedAccount = (Map<String, String>)it.next();
+		
+		return (String) retrievedAccount.get("accountid");
 	}
 
 	private void executeWaitAndAssertBatchJob(String flowConstructName)
