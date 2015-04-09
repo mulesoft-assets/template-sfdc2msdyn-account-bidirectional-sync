@@ -5,16 +5,13 @@
  */
 package org.mule.templates.utils;
 
-import java.util.GregorianCalendar;
-
 import org.apache.commons.lang.Validate;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
 /**
- * The function of this class is provide date comparation an transformation
- * functionality.
+ * Utility class, provides date comparison and transformation functionality.
  * 
  * @author damiansima, MartinZdila
  */
@@ -23,10 +20,8 @@ public class DateUtils {
 	/**
 	 * Validate which date is older.
 	 * 
-	 * @param dateA
-	 *            a string representing a date
-	 * @param dateB
-	 *            a string representing a date
+	 * @param dateA a string representation of date
+	 * @param dateB a string representation of date
 	 * @return true if the date A is after the date B
 	 */
 	public static boolean isAfter(String dateA, String dateB, long offsetBetweenAandB) {

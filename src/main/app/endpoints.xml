@@ -1,11 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:spring="http://www.springframework.org/schema/beans" xmlns:dynamicscrm="http://www.mulesoft.org/schema/mule/dynamicscrm" 
-	xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
-	xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" 
-	xmlns="http://www.mulesoft.org/schema/mule/core" 
-	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	version="EE-3.6.1"
+<mule xmlns:dynamicscrm="http://www.mulesoft.org/schema/mule/dynamicscrm" xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
+	xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.6.1"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
@@ -40,9 +37,9 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
             <processor-chain doc:name="Processor Chain">
                 <expression-component doc:name="lock processing to avoid two syncs occurring at the same time"><![CDATA[app.registry['PollSynchronizer'].lock();]]></expression-component>
                 <dynamicscrm:retrieve-multiple-by-query config-ref="Microsoft_Dynamics_CRM" query="dsql:SELECT accountid,accountnumber,description,modifiedby,modifiedon,name,new_salesforceid,numberofemployees,telephone1,revenue,tickersymbol, websiteurl, fax,sic FROM account
-WHERE modifiedon &gt; #[flowVars[&quot;lastQueryDateB&quot;]] ORDER BY modifiedon ASC" doc:name="retrieve accounts from MS Dynamics"/>
-            
-            </processor-chain>
+WHERE modifiedon &gt; #[flowVars[&quot;lastQueryDateB&quot;]] ORDER BY modifiedon ASC" doc:name="fetch accounts from Microsoft Dynamics CRM"/>
+
+                <logger message="#[payload]" level="INFO" doc:name="Logger"/>            </processor-chain>
 		</poll>
 		<batch:execute name="fromDynamicsCrmBatch" doc:name="trigger batch execution" />
 		        <exception-strategy ref="defaultChoiceExceptionStrategy" doc:name="catch Exception and call defaultChoiceExceptionStrategy"/>

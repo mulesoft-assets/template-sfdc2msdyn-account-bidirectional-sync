@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:dynamicscrm="http://www.mulesoft.org/schema/mule/dynamicscrm" 
-	  xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" 
-      xmlns="http://www.mulesoft.org/schema/mule/core"
+<mule xmlns:dynamicscrm="http://www.mulesoft.org/schema/mule/dynamicscrm" xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" xmlns="http://www.mulesoft.org/schema/mule/core"
       xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:spring="http://www.springframework.org/schema/beans"
       xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc"
       xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
       version="EE-3.6.1"
@@ -12,7 +11,8 @@
 http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
 http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
 http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd
-http://www.mulesoft.org/schema/mule/dynamicscrm http://www.mulesoft.org/schema/mule/dynamicscrm/current/mule-dynamicscrm.xsd">
+http://www.mulesoft.org/schema/mule/dynamicscrm http://www.mulesoft.org/schema/mule/dynamicscrm/current/mule-dynamicscrm.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd">
     <data-mapper:config name="Account_To_account" transformationGraphPath="account_to_account_2.grf" doc:name="Account_To_account"/>
     <data-mapper:config name="Account_To_account_1" transformationGraphPath="account_to_account.grf" doc:name="Account_To_account_1"/>
     <data-mapper:config name="Map_To_Map" transformationGraphPath="map_to_map.grf" doc:name="Map_To_Map"/>
@@ -32,7 +32,9 @@ WHERE name = '#[payload[&quot;Name&quot;]]'" doc:name="query account"/>
 			</batch:step>
 
 			<batch:step name="updateAccountInDynamicsCrmStep" accept-expression="(!(recordVars['accountInTargetInstance'] is NullPayload) &amp;&amp; org.mule.templates.date.DateUtils.ISOStringDateToDateTime(payload['LastModifiedDate']).isAfter(org.mule.templates.date.DateUtils.dateToDateTime(recordVars['accountInTargetInstance']['modifiedon'].toGregorianCalendar().getTime())) &amp;&amp; '${sfdc.integration.user.id}' != payload.get('LastModifiedById'))">
-                <expression-component doc:name="prepare account for update"><![CDATA[payload.put('Id', recordVars['accountInTargetInstance']['accountid']);
+                <expression-component doc:name="prepare account for update"><![CDATA[if(!(recordVars['accountInTargetInstance'] is NullPayload)) {
+	payload.put('Id', recordVars['accountInTargetInstance']['accountid']);
+}
 
 payload.remove('LastModifiedById');
 payload.remove('LastModifiedDate');

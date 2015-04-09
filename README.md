@@ -54,8 +54,11 @@ The question for recent changes since a certain moment in nothing but a [poll in
 
 # Considerations <a name="considerations"/>
 
-To make this Anypoint Template run, there are certain preconditions that must be considered. All of them deal with the preparations in both, that must be made in order for all to run smoothly. 
+To make this Anypoint Template run, there are certain preconditions that must be considered. All of them deal with the preparations in both, that must be made in order for all to run smoothly.
+
 **Failling to do so could lead to unexpected behavior of the template.**
+
+**Note:** You need to install Java Cryptography Extensions to be able to connect to MS Dynamics. Please [choose](http://www.oracle.com/technetwork/java/javase/downloads/index.html) a relevant version according to your Java installation.
 
 
 

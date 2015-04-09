@@ -3,7 +3,7 @@
 <mule xmlns:dynamicscrm="http://www.mulesoft.org/schema/mule/dynamicscrm"
 	xmlns:context="http://www.springframework.org/schema/context" xmlns="http://www.mulesoft.org/schema/mule/core"
 	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:spring="http://www.springframework.org/schema/beans" version="CE-3.6.0"
+	xmlns:spring="http://www.springframework.org/schema/beans" version="CE-3.6.1"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
 	xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
@@ -12,7 +12,7 @@ http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfd
 http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
 http://www.mulesoft.org/schema/mule/dynamicscrm http://www.mulesoft.org/schema/mule/dynamicscrm/current/mule-dynamicscrm.xsd">
 	
-	<!-- This is the main configuration files, you should place here all the Connectors configuration an declarations -->
+	<!-- This is the main configuration files, you should place here all the Connectors configuration and declarations -->
 
     <context:property-placeholder location="common.properties, mule.${mule.env}.properties"/>
 
