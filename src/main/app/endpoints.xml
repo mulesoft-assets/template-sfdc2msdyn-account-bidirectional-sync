@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:dynamicscrm="http://www.mulesoft.org/schema/mule/dynamicscrm" xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
+<mule xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:dynamicscrm="http://www.mulesoft.org/schema/mule/dynamicscrm" xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
 	xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
 	xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.6.1"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -8,7 +8,8 @@
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
 http://www.mulesoft.org/schema/mule/dynamicscrm http://www.mulesoft.org/schema/mule/dynamicscrm/current/mule-dynamicscrm.xsd
-http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd">
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
 
 	<flow name="triggerSyncFromSalesforceFlow" 
 		processingStrategy="synchronous" initialState="started">
@@ -19,11 +20,19 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
 				selector="MAX" selector-expression="#[payload.LastModifiedDate]" />
             <processor-chain doc:name="Processor Chain">
                 <expression-component doc:name="lock processing to avoid two syncs occurring at the same time"><![CDATA[app.registry['PollSynchronizer'].lock();]]></expression-component>
-                <sfdc:query config-ref="Salesforce" query="dsql:SELECT AccountNumber, AccountSource, AnnualRevenue, BillingCity, BillingCountry, BillingPostalCode, BillingState, BillingStreet, Description, Fax, Id, Industry, LastModifiedById, LastModifiedDate, Name, NumberOfEmployees, OwnerId, Ownership, ParentId, Phone, Rating, ShippingCity, ShippingCountry, ShippingPostalCode, ShippingState, ShippingStreet, Sic, SicDesc, Site, TickerSymbol, Type, Website FROM Account WHERE LastModifiedDate &gt; #[flowVars['lastQueryDateA']] ORDER BY LastModifiedDate ASC LIMIT 200" doc:name="fetch accounts from Salesforce"/>
+                <sfdc:query config-ref="Salesforce" query="dsql:SELECT AccountNumber, AccountSource, AnnualRevenue, BillingCity, BillingCountry, BillingPostalCode, BillingState, BillingStreet, Description, Fax, Id, Industry, LastModifiedById, LastModifiedDate, Name, NumberOfEmployees, OwnerId, Ownership, ParentId, Phone, Rating, ShippingCity, ShippingCountry, ShippingPostalCode, ShippingState, ShippingStreet, Sic, SicDesc, Site, TickerSymbol, Type, Website FROM Account WHERE (LastModifiedDate &gt; #[lastQueryDateA]) AND (LastModifiedById &lt;&gt; '${sfdc.integration.user.id}') LIMIT 200" doc:name="fetch accounts from Salesforce"/>
             </processor-chain>
 
 		</poll>
-		<batch:execute name="fromSalesforceBatch" doc:name="trigger batch execution" />
+        <choice doc:name="Results not empty">
+            <when expression="#[payload.size()&gt;0]">
+                <batch:execute name="fromSalesforceBatch" doc:name="trigger batch execution"/>
+            </when>
+            <otherwise>
+            	<expression-component doc:name="release lock"><![CDATA[#[app.registry['PollSynchronizer'].unlock()]]]></expression-component>
+                <logger message="No updated accounts found in Salesforce. Skipping flow execution." level="INFO" doc:name="no updates found"/>
+            </otherwise>
+        </choice>
 		        <exception-strategy ref="defaultChoiceExceptionStrategy" doc:name="catch Exception and call defaultChoiceExceptionStrategy"/>
 	</flow>
 
@@ -37,11 +46,18 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
             <processor-chain doc:name="Processor Chain">
                 <expression-component doc:name="lock processing to avoid two syncs occurring at the same time"><![CDATA[app.registry['PollSynchronizer'].lock();]]></expression-component>
                 <dynamicscrm:retrieve-multiple-by-query config-ref="Microsoft_Dynamics_CRM" query="dsql:SELECT accountid,accountnumber,description,modifiedby,modifiedon,name,new_salesforceid,numberofemployees,telephone1,revenue,tickersymbol, websiteurl, fax,sic FROM account
-WHERE modifiedon &gt; #[flowVars[&quot;lastQueryDateB&quot;]] ORDER BY modifiedon ASC" doc:name="fetch accounts from Microsoft Dynamics CRM"/>
-
-                <logger message="#[payload]" level="INFO" doc:name="Logger"/>            </processor-chain>
+WHERE (modifiedon &gt; #[lastQueryDateB]) AND (modifiedby_referenceto_systemuser &lt;&gt; '${dynamicscrm.integration.user.id}') LIMIT 200" doc:name="fetch accounts from Microsoft Dynamics CRM"/>
+			</processor-chain>
 		</poll>
-		<batch:execute name="fromDynamicsCrmBatch" doc:name="trigger batch execution" />
+        <choice doc:name="Results not empty">
+            <when expression="#[payload.size()&gt;0]">
+                <batch:execute name="fromDynamicsCrmBatch" doc:name="trigger batch execution"/>
+            </when>
+            <otherwise>
+                <expression-component doc:name="release lock"><![CDATA[#[app.registry['PollSynchronizer'].unlock()]]]></expression-component>
+                <logger message="No updated accounts found in MS Dynamics CRM. Skipping flow execution." level="INFO" doc:name="no updates found"/>
+            </otherwise>
+        </choice>
 		        <exception-strategy ref="defaultChoiceExceptionStrategy" doc:name="catch Exception and call defaultChoiceExceptionStrategy"/>
 	</flow>
 </mule>
