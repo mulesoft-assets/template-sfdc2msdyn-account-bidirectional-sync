@@ -30,27 +30,27 @@ As an admin, I want to have my accounts synchronized between two different syste
 
 **Template overview** 
 
-Let's say we want to keep Salesforce instance synchronized with MS Dynamics instance. Then, the integration behavior can be summarized just with the following steps:
+Let's say we want to keep Accounts synchronized between a Salesforce instance and a MS Dynamics CRM instance. Then, the integration behavior can be summarized just in the following steps:
 
 1. Ask Salesforce:
-> *Which changes have there been since the last time I got in touch with you?*
+> *What changes have there been since the last time I got in touch with you?*
 
 2. For each of the updates fetched in the previous step (1.), ask MS Dynamics:
 > *Does the update received from Salesforce should be applied?*
 
-3. If MS Dynamics answer for the previous question (2.) is *Yes*, then *upsert* (create or update depending each particular case) MS Dynamics with the belonging change.
+3. If MS Dynamics answers for the previous question (2.) is *Yes*, then *upsert* (create or update depending each particular case) MS Dynamics with the belonging change.
 
 4. Repeat previous steps (1. to 3.) the other way around (using MS Dynamics as source instance and Salesforce as the target one)
 
  Repeat *ad infinitum*:
 
 5. Ask Salesforce:
-> *Which changes have there been since the question I've made in the step 1.?*
+> *What changes have there been since the question I've made in the step 1.?*
 
 And so on...
   
   
-The question for recent changes since a certain moment in nothing but a [poll inbound][1] with a [watermark][2] defined.
+The question for recent changes since a certain moment in nothing but a [poll inbound](http://www.mulesoft.org/documentation/display/current/Poll+Reference) with a watermark defined.
 
 # Considerations <a name="considerations"/>
 
@@ -112,14 +112,14 @@ There are no particular considerations for this Anypoint Template regarding Sale
 
 ### As source of data
 
-There is need to define custom field **new_salesforceid** for Accounts in the system.
+In order for this Anypoint Template to work, a custom field **new_salesforceid** has to be defined for Accounts. Please find more information [here](https://technet.microsoft.com/en-us/library/dn531187.aspx).
 
 There are no other particular considerations for this Anypoint Template regarding Microsoft Dynamics CRM as data origin.
 ### As destination of data
 
-There is need to define custom field **new_salesforceid** for Accounts in the system.
+In order for this Anypoint Template to work, a custom field **new_salesforceid** has to be defined for Accounts. Please find more information [here](https://technet.microsoft.com/en-us/library/dn531187.aspx).
 
-There are no other particular considerations for this Anypoint Template regarding Microsoft Dynamics CRM as data origin.
+There are no other particular considerations for this Anypoint Template regarding Microsoft Dynamics CRM as data destination.
 
 
 # Run it! <a name="runit"/>
@@ -175,10 +175,7 @@ In order to use this Mule Anypoint Template you need to configure properties (Cr
 ### Application configuration
 **Application configuration**
 + polling.frequency `10000`  
-This are the miliseconds (also different time units can be used) that will run between two different checks for updates in Salesforce and MS Dynamics
-
-+ watermark.default.expression `2014-02-25T11:00:00.000Z`  
-This property is an important one, as it configures what should be the start point of the synchronization.The date format accepted in SFDC Query Language is either *YYYY-MM-DDThh:mm:ss+hh:mm* or you can use Constants. [More information about Dates in SFDC](http://www.salesforce.com/us/developer/docs/officetoolkit/Content/sforce_api_calls_soql_select_dateformats.htm)
+These are the miliseconds (also different time units can be used) that will run between two different checks for updates in Salesforce and MS Dynamics
 
 **SalesForce Connector configuration for company A**
 + sfdc.username `salesforce.user@mail.com`
@@ -186,13 +183,13 @@ This property is an important one, as it configures what should be the start poi
 + sfdc.securityToken `wJFJAf6lw3vH86bDLWSjpfJC`
 + sfdc.url `https://login.salesforce.com/services/Soap/u/32.0`
 + sfdc.integration.user.id `00520000003LtvGAAS`
-+ sfdc.watermark.default.expression `#[groovy: new Date(System.currentTimeMillis() - 10000).format("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone.getTimeZone('GMT'))]`
++ sfdc.watermark.default.expression `2015-04-01T19:40:27.000Z`
 
 **MS Dynamics Connector configuration for company B**
 + dynamicscrm.username `msDynamicsUser@@yourOrg.onmicrosoft.com`
 + dynamicscrm.password `msDynamicsPass`
 + dynamicscrm.url `https://htesting.api.crm4.dynamics.com/XRMServices/2011/Organization.svc`
-+ dynamicscrm.watermark.default.expression `#[groovy: new Date(System.currentTimeMillis() - 10000).format("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone.getTimeZone('GMT'))]`
++ dynamicscrm.watermark.default.expression `2015-04-01T19:40:27Z`
 + dynamicscrm.integration.user.id `534679675`
 + dynamicscrm.integration.ownerid `534679675`
 
