@@ -2,7 +2,7 @@
 
 <mule xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:dynamicscrm="http://www.mulesoft.org/schema/mule/dynamicscrm" xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
 	xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.6.1"
+	xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.6.2"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
@@ -22,7 +22,6 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
                 <expression-component doc:name="lock processing to avoid two syncs occurring at the same time"><![CDATA[app.registry['PollSynchronizer'].lock();]]></expression-component>
                 <sfdc:query config-ref="Salesforce" query="dsql:SELECT AccountNumber, AccountSource, AnnualRevenue, BillingCity, BillingCountry, BillingPostalCode, BillingState, BillingStreet, Description, Fax, Id, Industry, LastModifiedById, LastModifiedDate, Name, NumberOfEmployees, OwnerId, Ownership, ParentId, Phone, Rating, ShippingCity, ShippingCountry, ShippingPostalCode, ShippingState, ShippingStreet, Sic, SicDesc, Site, TickerSymbol, Type, Website FROM Account WHERE (LastModifiedDate &gt; #[lastQueryDateA]) AND (LastModifiedById &lt;&gt; '${sfdc.integration.user.id}') LIMIT 200" doc:name="fetch accounts from Salesforce"/>
             </processor-chain>
-
 		</poll>
         <choice doc:name="Results not empty">
             <when expression="#[payload.size()&gt;0]">
@@ -46,7 +45,7 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
             <processor-chain doc:name="Processor Chain">
                 <expression-component doc:name="lock processing to avoid two syncs occurring at the same time"><![CDATA[app.registry['PollSynchronizer'].lock();]]></expression-component>
                 <dynamicscrm:retrieve-multiple-by-query config-ref="Microsoft_Dynamics_CRM" query="dsql:SELECT accountid,accountnumber,description,modifiedby,modifiedon,name,new_salesforceid,numberofemployees,telephone1,revenue,tickersymbol, websiteurl, fax,sic FROM account
-WHERE (modifiedon &gt; #[lastQueryDateB]) AND (modifiedby_referenceto_systemuser &lt;&gt; '${dynamicscrm.integration.user.id}') LIMIT 200" doc:name="fetch accounts from Microsoft Dynamics CRM"/>
+WHERE modifiedon &gt; #[lastQueryDateB] AND modifiedby_referenceto_systemuser &lt;&gt; '${dynamicscrm.integration.user.id}' LIMIT 200" doc:name="fetch accounts from Microsoft Dynamics CRM"/>
 			</processor-chain>
 		</poll>
         <choice doc:name="Results not empty">
