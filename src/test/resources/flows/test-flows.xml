@@ -4,42 +4,50 @@
 		xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" 
 		xmlns="http://www.mulesoft.org/schema/mule/core" 
 		xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-		version="EE-3.6.1" 
+		version="EE-3.6.2" 
 		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
 		xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
 http://www.mulesoft.org/schema/mule/dynamicscrm http://www.mulesoft.org/schema/mule/dynamicscrm/current/mule-dynamicscrm.xsd">
+
+	<sfdc:config name="Test_Salesforce_A" username="${test.sfdc.username}"
+		password="${test.sfdc.password}" securityToken="${test.sfdc.securityToken}"
+		url="${test.sfdc.url}" doc:name="Salesforce"
+		doc:description="One of your SalesForce instances, order does not matter.">
+		<sfdc:connection-pooling-profile
+			initialisationPolicy="INITIALISE_ONE" exhaustedAction="WHEN_EXHAUSTED_GROW" />
+	</sfdc:config>
+
+	<dynamicscrm:config name="Test_Microsoft_Dynamics_CRM" username="${test.dynamicscrm.username}" password="${test.dynamicscrm.password}" organizationServiceUrl="${dynamicscrm.url}" authenticationType="CRMONLINE" disableCnCheck="true" doc:name="Microsoft Dynamics CRM"/>
+
     <sub-flow name="createAccountInAFlow" >
-        <sfdc:create config-ref="Salesforce" type="Account" doc:name="Salesforce">
+        <sfdc:create config-ref="Test_Salesforce_A" type="Account" doc:name="Salesforce">
             <sfdc:objects ref="#[payload]"/>
         </sfdc:create>
     </sub-flow>
         <sub-flow name="createAccountInBFlow" >
         <foreach doc:name="For Each">
-            <dynamicscrm:create config-ref="Microsoft_Dynamics_CRM" logicalName="account" doc:name="Microsoft Dynamics CRM">
+            <dynamicscrm:create config-ref="Test_Microsoft_Dynamics_CRM" logicalName="account" doc:name="Microsoft Dynamics CRM">
                 <dynamicscrm:attributes ref="#[payload]"/>
             </dynamicscrm:create>
         </foreach>
 
     </sub-flow>
     <sub-flow name="retrieveAccountFromAFlow">
-        <sfdc:query-single config-ref="Salesforce" query="SELECT Name, Phone, Description FROM Account WHERE (Name = '#[payload['Name']]')" doc:name="Salesforce"/>
+        <sfdc:query-single config-ref="Test_Salesforce_A" query="SELECT Name, Phone, Description FROM Account WHERE (Name = '#[payload['Name']]')" doc:name="Salesforce"/>
     </sub-flow>
     <sub-flow name="retrieveAccountFromBFlow">
-        <dynamicscrm:retrieve-multiple-by-query config-ref="Microsoft_Dynamics_CRM" query="dsql:SELECT accountid,description,name,telephone1 FROM account WHERE name = '#[payload['name']]'" doc:name="Microsoft Dynamics CRM"/>
+        <dynamicscrm:retrieve-multiple-by-query config-ref="Test_Microsoft_Dynamics_CRM" query="dsql:SELECT accountid,description,name,telephone1 FROM account WHERE name = '#[payload['name']]'" doc:name="Microsoft Dynamics CRM"/>
     </sub-flow>
     <sub-flow name="deleteAccountFromAFlow" >
-        <sfdc:delete config-ref="Salesforce" doc:name="Salesforce">
+        <sfdc:delete config-ref="Test_Salesforce_A" doc:name="Salesforce">
             <sfdc:ids ref="#[payload]"/>
         </sfdc:delete>
 
     </sub-flow>
     <sub-flow name="deleteAccountFromBFlow" >
         <foreach doc:name="For Each">
-            <dynamicscrm:delete config-ref="Microsoft_Dynamics_CRM" logicalName="account" doc:name="Microsoft Dynamics CRM"/>
+            <dynamicscrm:delete config-ref="Test_Microsoft_Dynamics_CRM" logicalName="account" doc:name="Microsoft Dynamics CRM"/>
         </foreach>
-
     </sub-flow>
-    
-
 </mule>
