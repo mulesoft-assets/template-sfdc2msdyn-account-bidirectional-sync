@@ -13,9 +13,9 @@ http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/ba
 http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd
 http://www.mulesoft.org/schema/mule/dynamicscrm http://www.mulesoft.org/schema/mule/dynamicscrm/current/mule-dynamicscrm.xsd
 http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd">
-    <data-mapper:config name="Account_To_account" transformationGraphPath="account_to_account_2.grf" doc:name="Account_To_account"/>
-    <data-mapper:config name="Account_To_account_1" transformationGraphPath="account_to_account.grf" doc:name="Account_To_account_1"/>
-    <data-mapper:config name="Map_To_Map" transformationGraphPath="map_to_map.grf" doc:name="Map_To_Map"/>
+    <data-mapper:config name="Insert_SFDCAccount_MSDynAccount" transformationGraphPath="Insert_SFDCAccount_MSDynAccount.grf" doc:name="Insert_SFDCAccount_MSDynAccount"/>
+    <data-mapper:config name="Update_SFDCAccount_MSDynAccount" transformationGraphPath="Update_SFDCAccount_MSDynAccount.grf" doc:name="Update_SFDCAccount_MSDynAccount"/>
+    <data-mapper:config name="MSDynAccount_SFDCAccount" transformationGraphPath="MSDynAccount_SFDCAccount.grf" doc:name="MSDynAccount_SFDCAccount"/>
 
 	<batch:job name="fromSalesforceBatch" max-failed-records="-1">
 		<batch:threading-profile poolExhaustedAction="WAIT" />
@@ -32,35 +32,31 @@ WHERE name = '#[payload[&quot;Name&quot;]]'" doc:name="query matching account in
 			</batch:step>
 
 			<batch:step name="updateAccountInDynamicsCrmStep" accept-expression="(!(recordVars['accountInTargetInstance'] is NullPayload) &amp;&amp; org.mule.templates.date.DateUtils.ISOStringDateToDateTime(payload['LastModifiedDate']).isAfter(org.mule.templates.date.DateUtils.ISOStringDateToDateTime(recordVars['accountInTargetInstance']['modifiedon'])))">
-                <expression-component doc:name="prepare account for update"><![CDATA[if(!(recordVars['accountInTargetInstance'] is NullPayload)) {
-	payload.put('accountid', recordVars['accountInTargetInstance']['accountid']);
-}
-
-payload.remove('LastModifiedById');
-payload.remove('LastModifiedDate');
-
-]]></expression-component>
-                <data-mapper:transform config-ref="Account_To_account_1" doc:name="transform Salesforce account to Dynamics CRM account"/>
+				 <expression-component doc:name="set target accountid"><![CDATA[if(!(recordVars['accountInTargetInstance'] is NullPayload)) {
+		payload.put('accountid', recordVars['accountInTargetInstance']['accountid']);
+	}
+	]]></expression-component>
+				
 				<batch:commit size="2" doc:name="Batch Commit">
-                    <dynamicscrm:update-multiple config-ref="Microsoft_Dynamics_CRM"  logicalName="account" doc:name="update accounts">
+                    <data-mapper:transform config-ref="Update_SFDCAccount_MSDynAccount" doc:name="transform Salesforce account to Dynamics CRM account">
+                        <data-mapper:input-arguments>
+                        </data-mapper:input-arguments>
+                    </data-mapper:transform>
+                    <dynamicscrm:update-multiple config-ref="Microsoft_Dynamics_CRM" logicalName="account" doc:name="update accounts">
                         <dynamicscrm:attributes-list ref="#[payload]"/>
                     </dynamicscrm:update-multiple>
-					<logger message="Update Dynamics CRM response: #[payload]"
+					<logger message="Update Dynamics CRM response: #['sucess: ' + payload.successful + ' - batch size: ' + payload.items.size()]"
 						level="INFO" doc:name="log response" />
 				</batch:commit>
 			</batch:step>
 
 			<batch:step name="insertAccountsInDynamicsCrmStep" accept-expression="(recordVars['accountInTargetInstance'] is NullPayload)">
-                <expression-component doc:name="prepare account for insert"><![CDATA[payload.remove('LastModifiedById');
-payload.remove('LastModifiedDate');
-
-]]></expression-component>
-                <data-mapper:transform config-ref="Account_To_account" doc:name="transform Salesforce account to Dynamics CRM account"/>
 				<batch:commit size="2" doc:name="Batch Commit">
+                    <data-mapper:transform config-ref="Insert_SFDCAccount_MSDynAccount" doc:name="transform Salesforce account to Dynamics CRM account"/>
                     <dynamicscrm:create-multiple config-ref="Microsoft_Dynamics_CRM" logicalName="account" doc:name="insert accounts">
                         <dynamicscrm:attributes-list ref="#[payload]"/>
                     </dynamicscrm:create-multiple>
-					<logger message="Insert Dynamics CRM response: #[payload]"	level="INFO" doc:name="log response" />
+					<logger message="Insert Dynamics CRM response: #['sucess: ' + payload.successful + ' - batch size: ' + payload.items.size()]"	level="INFO" doc:name="log response" />
 				</batch:commit>
 			</batch:step>
 		</batch:process-records>
@@ -80,20 +76,15 @@ payload.remove('LastModifiedDate');
 			</batch:step>
 
 			<batch:step name="upsertAccountInSalesforceStep" accept-expression="recordVars['accountInTargetInstance'] is NullPayload ? true : org.mule.templates.date.DateUtils.ISOStringDateToDateTime(payload['modifiedon']).isAfter(org.mule.templates.date.DateUtils.ISOStringDateToDateTime(recordVars['accountInTargetInstance']['LastModifiedDate']))">
-                <data-mapper:transform config-ref="Map_To_Map" doc:name="transform Dynamics CRM account to Salesforce account"/>
-				<expression-component doc:name="prepare account for upsert"><![CDATA[
-if(!(recordVars['accountInTargetInstance'] is NullPayload)) {
-	payload.put('Id', recordVars['accountInTargetInstance']['Id']);
-}
-
-payload.remove('LastModifiedDate');
-payload.remove('LastModifiedById');
-]]></expression-component>
+				<expression-component doc:name="set target accountid"><![CDATA[if(!(recordVars['accountInTargetInstance'] is NullPayload)) {
+	payload.put('new_salesforceid', recordVars['accountInTargetInstance']['Id']);
+}]]></expression-component>
+			
 				<batch:commit size="200" doc:name="Batch Commit">
-					<sfdc:upsert config-ref="Salesforce"
-						externalIdFieldName="Id" type="Account" doc:name="upsert account">
-						<sfdc:objects ref="#[payload]" />
-					</sfdc:upsert>
+                    <data-mapper:transform config-ref="MSDynAccount_SFDCAccount" doc:name="transform Dynamics CRM account to Salesforce account" />
+                    <sfdc:upsert config-ref="Salesforce" externalIdFieldName="Id" type="Account" doc:name="upsert accounts">
+                        <sfdc:objects ref="#[payload]"/>
+                    </sfdc:upsert>
 					<logger message="Upsert Salesforce A response: #[payload]"
 						level="ERROR" doc:name="log response" />
 				</batch:commit>
