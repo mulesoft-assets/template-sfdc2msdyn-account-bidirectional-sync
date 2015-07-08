@@ -1,47 +1,60 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:dynamicscrm="http://www.mulesoft.org/schema/mule/dynamicscrm" xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" xmlns="http://www.mulesoft.org/schema/mule/core"
-      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-      xmlns:spring="http://www.springframework.org/schema/beans"
-      xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc"
-      xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
-      version="EE-3.6.2"
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule version="EE-3.7.0"
+	xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" 
+	xmlns:dynamicscrm="http://www.mulesoft.org/schema/mule/dynamicscrm" 
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+    xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+    xmlns:spring="http://www.springframework.org/schema/beans"
+    xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc"
+    xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
 http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
-http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd
 http://www.mulesoft.org/schema/mule/dynamicscrm http://www.mulesoft.org/schema/mule/dynamicscrm/current/mule-dynamicscrm.xsd
-http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd">
-    <data-mapper:config name="Insert_SFDCAccount_MSDynAccount" transformationGraphPath="Insert_SFDCAccount_MSDynAccount.grf" doc:name="Insert_SFDCAccount_MSDynAccount"/>
-    <data-mapper:config name="Update_SFDCAccount_MSDynAccount" transformationGraphPath="Update_SFDCAccount_MSDynAccount.grf" doc:name="Update_SFDCAccount_MSDynAccount"/>
-    <data-mapper:config name="MSDynAccount_SFDCAccount" transformationGraphPath="MSDynAccount_SFDCAccount.grf" doc:name="MSDynAccount_SFDCAccount"/>
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
 
-	<batch:job name="fromSalesforceBatch" max-failed-records="-1">
+
+ 	<batch:job name="fromSalesforceBatch" max-failed-records="-1"> 
 		<batch:threading-profile poolExhaustedAction="WAIT" />
 		<batch:process-records>
 
 			<batch:step name="getAccountInDynamicsCrmStep" >
-				<enricher
-					source="#[payload.size() == 0 ? NullPayload.getInstance() : payload.next()]"
-					target="#[recordVars['accountInTargetInstance']]" doc:name="store result in record var 'accountInTargetInstance'">
+				<enricher doc:name="enrich payload with CRM Id and timestamp">
                     <dynamicscrm:retrieve-multiple-by-query config-ref="Microsoft_Dynamics_CRM" query="dsql:SELECT accountid,accountnumber,description,fax,modifiedbyname,modifiedon,name,new_salesforceid,numberofemployees,revenue,sic,telephone1,tickersymbol,websiteurl FROM account
 WHERE name = '#[payload[&quot;Name&quot;]]'" doc:name="query matching account in MS Dynamics"/>
+                    <enrich source="#[payload == null ? null : payload.modifiedon]" target="#[payload.LastModifiedDateCRM]"/>
+                    <enrich source="#[payload == null ? null : payload.accountid]" target="#[payload.IdInCRM]"/>
             
 				</enricher>
 			</batch:step>
 
-			<batch:step name="updateAccountInDynamicsCrmStep" accept-expression="(!(recordVars['accountInTargetInstance'] is NullPayload) &amp;&amp; org.mule.templates.date.DateUtils.ISOStringDateToDateTime(payload['LastModifiedDate']).isAfter(org.mule.templates.date.DateUtils.ISOStringDateToDateTime(recordVars['accountInTargetInstance']['modifiedon'])))">
-				 <expression-component doc:name="set target accountid"><![CDATA[if(!(recordVars['accountInTargetInstance'] is NullPayload)) {
-		payload.put('accountid', recordVars['accountInTargetInstance']['accountid']);
-	}
-	]]></expression-component>
+			<batch:step name="updateAccountInDynamicsCrmStep" accept-expression="payload.IdInCRM != null &amp;&amp; org.mule.templates.utils.DateUtils.isAfter(payload.LastModifiedDate, payload.modifiedon, 0)">
+
 				
-				<batch:commit size="2" doc:name="Batch Commit">
-                    <data-mapper:transform config-ref="Update_SFDCAccount_MSDynAccount" doc:name="transform Salesforce account to Dynamics CRM account">
-                        <data-mapper:input-arguments>
-                        </data-mapper:input-arguments>
-                    </data-mapper:transform>
+				<batch:commit size="200" doc:name="Batch Commit">
+                    <dw:transform-message doc:name="Salesforce account to CRM account">
+                        <dw:set-payload><![CDATA[%dw 1.0
+%input payload application/java
+%output application/java
+---
+payload map {
+	accountnumber 		: $.AccountNumber,
+	description 		: $.Description,
+	fax 				: $.Fax,
+	name 				: $.Name,
+	numberofemployees 	: $.NumberOfEmployees,
+	sic 				: $.Sic,
+	tickersymbol 		: $.TickerSymbol,
+	accountid 			: $.IdInCRM,
+	new_salesforceid 	: $.Id,
+	revenue 			: $.AnnualRevenue,
+	telephone1 			: $.Phone,
+	websiteurl 			: $.Website
+}]]></dw:set-payload>
+                    </dw:transform-message>
                     <dynamicscrm:update-multiple config-ref="Microsoft_Dynamics_CRM" logicalName="account" doc:name="update accounts">
                         <dynamicscrm:attributes-list ref="#[payload]"/>
                     </dynamicscrm:update-multiple>
@@ -50,13 +63,33 @@ WHERE name = '#[payload[&quot;Name&quot;]]'" doc:name="query matching account in
 				</batch:commit>
 			</batch:step>
 
-			<batch:step name="insertAccountsInDynamicsCrmStep" accept-expression="(recordVars['accountInTargetInstance'] is NullPayload)">
-				<batch:commit size="2" doc:name="Batch Commit">
-                    <data-mapper:transform config-ref="Insert_SFDCAccount_MSDynAccount" doc:name="transform Salesforce account to Dynamics CRM account"/>
+			<batch:step name="insertAccountsInDynamicsCrmStep" accept-expression="payload.IdInCRM == null">
+				<batch:commit size="200" doc:name="Batch Commit">
+
+                    <dw:transform-message doc:name="Salesforce account to CRM account">
+                        <dw:set-payload><![CDATA[%dw 1.0
+%input payload application/java
+%output application/java
+---
+payload map {
+	accountnumber 		: $.AccountNumber,
+	description 		: $.Description,
+	fax 				: $.Fax,
+	name 				: $.Name,
+	numberofemployees 	: $.NumberOfEmployees,
+	sic 				: $.Sic,
+	tickersymbol 		: $.TickerSymbol,
+	revenue 			: $.AnnualRevenue,
+	new_salesforceid 	: $.Id,
+	telephone1 			: $.Phone,
+	websiteurl 			: $.Website
+}]]></dw:set-payload>
+                    </dw:transform-message>
                     <dynamicscrm:create-multiple config-ref="Microsoft_Dynamics_CRM" logicalName="account" doc:name="insert accounts">
                         <dynamicscrm:attributes-list ref="#[payload]"/>
                     </dynamicscrm:create-multiple>
 					<logger message="Insert Dynamics CRM response: #['sucess: ' + payload.successful + ' - batch size: ' + payload.items.size()]"	level="INFO" doc:name="log response" />
+
 				</batch:commit>
 			</batch:step>
 		</batch:process-records>
@@ -66,22 +99,42 @@ WHERE name = '#[payload[&quot;Name&quot;]]'" doc:name="query matching account in
         </batch:on-complete>
 	</batch:job>
 	
-	<batch:job name="fromDynamicsCrmBatch" max-failed-records="-1">
+ 	<batch:job name="fromDynamicsCrmBatch" max-failed-records="-1">
 		<batch:threading-profile poolExhaustedAction="WAIT" />
 		<batch:process-records>
 			<batch:step name="getAccountInSalesforceStep" >
-				<enricher source="#[payload]" target="#[recordVars['accountInTargetInstance']]" doc:name="store result in record var 'accountInTargetInstance'">
+				<enricher   doc:name="enrich payload with SFDC Id and timestamp">
                     <sfdc:query-single config-ref="Salesforce" query="SELECT Id, Name, LastModifiedById, LastModifiedDate, NumberOfEmployees FROM Account WHERE (Name = '#[payload['name']]')" doc:name="query matching account in Salesforce"/>
+                    <enrich source="#[payload == null ? null : payload.LastModifiedDate]" target="#[payload.LastModifiedDate]"/>
+                    <enrich source="#[payload == null ? null : payload.Id]" target="#[payload.new_salesforceid]"/>
 				</enricher>
+
 			</batch:step>
 
-			<batch:step name="upsertAccountInSalesforceStep" accept-expression="recordVars['accountInTargetInstance'] is NullPayload ? true : org.mule.templates.date.DateUtils.ISOStringDateToDateTime(payload['modifiedon']).isAfter(org.mule.templates.date.DateUtils.ISOStringDateToDateTime(recordVars['accountInTargetInstance']['LastModifiedDate']))">
-				<expression-component doc:name="set target accountid"><![CDATA[if(!(recordVars['accountInTargetInstance'] is NullPayload)) {
-	payload.put('new_salesforceid', recordVars['accountInTargetInstance']['Id']);
-}]]></expression-component>
+			<batch:step name="upsertAccountInSalesforceStep" accept-expression="payload.new_salesforceid == null ? true : org.mule.templates.utils.DateUtils.isAfter(payload.modifiedon, payload.LastModifiedDate, 0)">
+
 			
 				<batch:commit size="200" doc:name="Batch Commit">
-                    <data-mapper:transform config-ref="MSDynAccount_SFDCAccount" doc:name="transform Dynamics CRM account to Salesforce account" />
+                    <dw:transform-message doc:name="CRM account to SFDC account">
+                        <dw:set-payload><![CDATA[%dw 1.0
+%input payload application/java
+%output application/java
+---
+payload map {
+	AccountNumber 		: $.accountnumber,
+	Description 		: $.description,
+	Fax 				: $.fax,
+	Name 				: $.name,
+	NumberOfEmployees 	: $.numberofemployees,
+	Sic 				: $.sic,
+	TickerSymbol 		: $.tickersymbol,
+	AnnualRevenue 		: $.revenue,
+	(Id					: $.new_salesforceid) when $.new_salesforceid != null,
+	Phone 				: $.telephone1,
+	Website 			: $.webisteurl
+}]]></dw:set-payload>
+                    </dw:transform-message>
+
                     <sfdc:upsert config-ref="Salesforce" externalIdFieldName="Id" type="Account" doc:name="upsert accounts">
                         <sfdc:objects ref="#[payload]"/>
                     </sfdc:upsert>
