@@ -1,5 +1,5 @@
 
-# Anypoint Template: Salesforce to MS Dynamics Account bidirectional sync
+# Anypoint Template: Salesforce and MS Dynamics Account bidirectional sync
 
 + [License Agreement](#licenseagreement)
 + [Use Case](#usecase)
@@ -123,7 +123,7 @@ There are no other particular considerations for this Anypoint Template regardin
 
 
 # Run it! <a name="runit"/>
-Simple steps to get Salesforce to MS Dynamics Account bidirectional sync running.
+Simple steps to get Salesforce and MS Dynamics Account bidirectional sync running.
 See below.
 
 ## Running on premise <a name="runonopremise"/>
@@ -174,7 +174,7 @@ Mule Studio provides you with really easy way to deploy your Template directly t
 In order to use this Mule Anypoint Template you need to configure properties (Credentials, configurations, etc.) either in properties file or in CloudHub as Environment Variables. Detail list with examples:
 ### Application configuration
 **Application configuration**
-+ polling.frequency `10000`  
++ poll.frequencyMillis `10000`  
 These are the miliseconds (also different time units can be used) that will run between two different checks for updates in Salesforce and MS Dynamics
 
 **SalesForce Connector configuration for company A**

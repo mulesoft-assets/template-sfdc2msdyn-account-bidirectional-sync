@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <configuration>
 	<placeholders>
-		<placeholder id="template_name">Salesforce to MS Dynamics Account bidirectional sync</placeholder>
+		<placeholder id="template_name">Salesforce and MS Dynamics Account bidirectional sync</placeholder>
 	</placeholders>
 	<sections>
 		<section id="use_case">
@@ -66,7 +66,7 @@ See below.
 		<section id="application_configuration">
 		<![CDATA[
 **Application configuration**
-+ polling.frequency `10000`  
++ poll.frequencyMillis `10000`  
 These are the miliseconds (also different time units can be used) that will run between two different checks for updates in Salesforce and MS Dynamics
 
 **SalesForce Connector configuration for company A**

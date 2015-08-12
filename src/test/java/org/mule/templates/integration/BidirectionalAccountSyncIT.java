@@ -63,7 +63,7 @@ public class BidirectionalAccountSyncIT extends AbstractTemplatesTestCase {
 		System.setProperty("page.size", "1000");
 
 		// Set polling frequency to 10 seconds
-		System.setProperty("polling.frequency", "10000");
+		System.setProperty("poll.frequencyMillis", "10000");
 
 		// Set default water-mark expression to current time
 		System.clearProperty("sfdc.watermark.default.expression");
