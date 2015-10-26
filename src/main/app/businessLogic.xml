@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule version="EE-3.7.1"
+<mule version="EE-3.7.2"
 	xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" 
 	xmlns:dynamicscrm="http://www.mulesoft.org/schema/mule/dynamicscrm" 
 	xmlns="http://www.mulesoft.org/schema/mule/core"
@@ -37,7 +37,6 @@ WHERE name = '#[payload[&quot;Name&quot;]]'" doc:name="query matching account in
 				<batch:commit size="200" doc:name="Batch Commit">
                     <dw:transform-message doc:name="Salesforce account to CRM account">
                         <dw:set-payload><![CDATA[%dw 1.0
-%input payload application/java
 %output application/java
 ---
 payload map {
@@ -68,7 +67,6 @@ payload map {
 
                     <dw:transform-message doc:name="Salesforce account to CRM account">
                         <dw:set-payload><![CDATA[%dw 1.0
-%input payload application/java
 %output application/java
 ---
 payload map {
@@ -117,7 +115,6 @@ payload map {
 				<batch:commit size="200" doc:name="Batch Commit">
                     <dw:transform-message doc:name="CRM account to SFDC account">
                         <dw:set-payload><![CDATA[%dw 1.0
-%input payload application/java
 %output application/java
 ---
 payload map {
