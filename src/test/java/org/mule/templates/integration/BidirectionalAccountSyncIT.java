@@ -175,7 +175,7 @@ public class BidirectionalAccountSyncIT extends AbstractTemplatesTestCase {
 }
 	
 	@Test
-	public void whenNewnAccountInInstanceAIsCreatedTheNewAccountInInstanceBShouldBeCreatedToo() throws MuleException, Exception {
+	public void whenNewAccountInInstanceAIsCreatedTheNewAccountInInstanceBShouldBeCreatedToo() throws MuleException, Exception {
 
 		// Build test accounts
 		final String accountName = ANYPOINT_TEMPLATE_NAME + "-" + System.currentTimeMillis() + "Account";
