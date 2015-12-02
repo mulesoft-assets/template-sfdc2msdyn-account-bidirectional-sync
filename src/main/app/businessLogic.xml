@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule version="EE-3.7.2"
-	xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" 
+<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" 
 	xmlns:dynamicscrm="http://www.mulesoft.org/schema/mule/dynamicscrm" 
 	xmlns="http://www.mulesoft.org/schema/mule/core"
     xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
@@ -31,7 +30,7 @@ WHERE name = '#[payload[&quot;Name&quot;]]'" doc:name="query matching account in
 				</enricher>
 			</batch:step>
 
-			<batch:step name="updateAccountInDynamicsCrmStep" accept-expression="payload.IdInCRM != null &amp;&amp; org.mule.templates.utils.DateUtils.isAfter(payload.LastModifiedDate, payload.modifiedon, 0)">
+			<batch:step name="updateAccountInDynamicsCrmStep" accept-expression="payload.IdInCRM != null &amp;&amp; (new org.joda.time.DateTime(payload.LastModifiedDate)).isAfter(org.joda.time.format.ISODateTimeFormat.dateOptionalTimeParser().parseDateTime(payload.modifiedon))">
 
 				
 				<batch:commit size="200" doc:name="Batch Commit">
@@ -109,7 +108,7 @@ payload map {
 
 			</batch:step>
 
-			<batch:step name="upsertAccountInSalesforceStep" accept-expression="payload.new_salesforceid == null ? true : org.mule.templates.utils.DateUtils.isAfter(payload.modifiedon, payload.LastModifiedDate, 0)">
+			<batch:step name="upsertAccountInSalesforceStep" accept-expression="payload.new_salesforceid == null ? true : org.joda.time.format.ISODateTimeFormat.dateOptionalTimeParser().parseDateTime(payload.modifiedon).isAfter(new org.joda.time.DateTime(payload.LastModifiedDate))">
 
 			
 				<batch:commit size="200" doc:name="Batch Commit">
