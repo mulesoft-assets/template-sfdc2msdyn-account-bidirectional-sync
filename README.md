@@ -174,18 +174,24 @@ Mule Studio provides you with really easy way to deploy your Template directly t
 In order to use this Mule Anypoint Template you need to configure properties (Credentials, configurations, etc.) either in properties file or in CloudHub as Environment Variables. Detail list with examples:
 ### Application configuration
 **Application configuration**
+
 + poll.frequencyMillis `10000`  
 These are the miliseconds (also different time units can be used) that will run between two different checks for updates in Salesforce and MS Dynamics
 
 **SalesForce Connector configuration for company A**
+
 + sfdc.username `salesforce.user@mail.com`
 + sfdc.password `salesforcePass`
 + sfdc.securityToken `wJFJAf6lw3vH86bDLWSjpfJC`
 + sfdc.url `https://login.salesforce.com/services/Soap/u/32.0`
 + sfdc.integration.user.id `00520000003LtvGAAS`
+
+	**Note:** To find out the correct *sfdc.integration.user.id* value, please, refer to example project **Salesforce Data Retrieval** in [Anypoint Exchange](http://www.mulesoft.org/documentation/display/current/Anypoint+Exchange).
+
 + sfdc.watermark.default.expression `2015-04-01T19:40:27.000Z`
 
 **MS Dynamics Connector configuration for company B**
+
 + dynamicscrm.username `msDynamicsUser@@yourOrg.onmicrosoft.com`
 + dynamicscrm.password `msDynamicsPass`
 + dynamicscrm.url `https://htesting.api.crm4.dynamics.com/XRMServices/2011/Organization.svc`
