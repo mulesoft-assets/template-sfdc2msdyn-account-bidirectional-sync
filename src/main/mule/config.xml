@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:microsoft-dynamics-crm="http://www.mulesoft.org/schema/mule/microsoft-dynamics-crm"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/microsoft-dynamics-crm http://www.mulesoft.org/schema/mule/microsoft-dynamics-crm/current/mule-microsoft-dynamics-crm.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+	<microsoft-dynamics-crm:dynamics-crm-config
+		name="Microsoft_Dynamics_CRM_Dynamics_CRM" doc:name="Microsoft Dynamics CRM Dynamics CRM"
+		doc:id="8f56e2f6-7098-417d-8c64-8a19979b9e43">
+		<microsoft-dynamics-crm:online-connection
+			authenticationRetries="${msdyn.authenticationRetries}" username="${msdyn.username}"
+			password="${msdyn.password}" organizationServiceUrl="${msdyn.url}"
+			disableCnCheck="true" />
+	</microsoft-dynamics-crm:dynamics-crm-config>
+	<salesforce:sfdc-config name="Salesforce_Config"
+		doc:name="Salesforce Config" doc:id="30f302ae-5ebe-4a01-8ed8-dc9de37d5b26">
+		<salesforce:basic-connection username="${sfdc.username}"
+			password="${sfdc.password}" securityToken="${sfdc.securityToken}"/>
+	</salesforce:sfdc-config>
+	<configuration-properties doc:name="Configuration properties"
+		doc:id="8ed317fb-08f6-4fe4-8568-a3c0d785a524" file="mule.${mule.env}.properties" />
+	<os:config name="ObjectStore_Config" doc:name="ObjectStore Config"
+		doc:id="2a99d6a9-f50f-4e3f-82f8-d53aa95945e5" />
+	<os:object-store name="Object_store" doc:name="Object store"
+		doc:id="f8e049fd-7a0a-432e-8a5f-bf1e19a47fe4" config-ref="ObjectStore_Config" />
+	<configuration-properties doc:name="Configuration properties"
+		doc:id="12814841-3109-4499-9313-210df77c594e" file="common.properties" />
+
+
+</mule>

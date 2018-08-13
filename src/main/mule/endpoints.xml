@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:microsoft-dynamics-crm="http://www.mulesoft.org/schema/mule/microsoft-dynamics-crm"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/microsoft-dynamics-crm http://www.mulesoft.org/schema/mule/microsoft-dynamics-crm/current/mule-microsoft-dynamics-crm.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+
+	<flow name="schedulerFlow" doc:id="aff4106d-d2f6-4366-940a-a380dcb1cf73">
+		<scheduler doc:name="Scheduler" doc:id="58b7c776-fbee-4753-9bea-f6cc3e037efd">
+			<scheduling-strategy>
+				<fixed-frequency frequency="${scheduler.frequency}"
+					startDelay="${scheduler.startDelay}" />
+			</scheduling-strategy>
+		</scheduler>
+		<os:retrieve key="syncState" doc:name="Retrieve sync state"
+			objectStore="Object_store" target="syncState">
+			<os:default-value><![CDATA[fromSalesforce]]></os:default-value>
+		</os:retrieve>
+		<choice doc:name="SyncState?" doc:id="b4703d83-780b-4e2d-bf5d-51b1566d66e2">
+			<when
+				expression="#[(vars.syncState != 'running' and vars.syncState == 'fromSalesforce') or vars.syncState == null]">
+				<logger level="INFO" doc:name="Sync from SFDC to MSDYN"
+					doc:id="c9cd1c27-5978-4ad8-b87f-99da49944447" message="Synchronisation from SFDC to MSDYN has been triggered" />
+				<os:store key="syncState" doc:name="Set sync state to running"
+					doc:id="340ac5e0-764f-4164-aeaa-14e616987553" objectStore="Object_store">
+					<os:value><![CDATA[running]]></os:value>
+				</os:store>
+
+
+				<flow-ref doc:name="querySalesforceFlow" doc:id="b0c87553-d459-4f12-940c-0f8f19892266"
+					name="querySalesforceFlow" />
+				<flow-ref doc:name="syncFromSalesforceToDynamicsCrm"
+					doc:id="43633fd4-8ec3-4899-8a82-93b88f816122" name="syncFromSalesforceToDynamicsCrm" />
+
+
+			</when>
+			<when
+				expression="#[vars.syncState != 'running' and vars.syncState == 'fromDynamicsCrm']">
+				<logger level="INFO" doc:name="Sync from MSDYN to SFDC"
+					doc:id="840599bf-2442-45d6-b66d-fbe11593bd60" message="Synchronisation from MSDYN  to SFDC has been triggered" />
+				<os:store doc:name="Set sync state to running" doc:id="cf109b13-9d13-48b1-b772-c00bb1659567"
+					key="syncState" objectStore="Object_store">
+					<os:value><![CDATA[running]]></os:value>
+				</os:store>
+				<flow-ref doc:name="queryDynamicsCrmFlow" doc:id="e2a47091-95e5-4bfc-a8db-9ea16a98a132"
+					name="queryDynamicsCrmFlow" />
+				<flow-ref doc:name="syncFromDynamicsCrmToSalesforce"
+					doc:id="cb69e223-f40d-40f7-a1bd-d18221b588c9" name="syncFromDynamicsCrmToSalesforce" />
+
+
+			</when>
+			<otherwise>
+				<logger level="INFO" doc:name="Batch running"
+					doc:id="bf955eec-4baf-4836-b7fd-7d77ff5ebcb1" message="Synchronisation in progress" />
+			</otherwise>
+		</choice>
+		<error-handler>
+			<on-error-propagate enableNotifications="true"
+				logException="true" doc:name="On Error Propagate" doc:id="488b507d-e26c-4c56-8759-8bb4f6645d71"
+				type="ANY">
+				<flow-ref doc:name="errorHandlingFlow" doc:id="afdaf73c-0137-4d60-84f6-5c41234771a3"
+					name="errorHandlingFlow" />
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+
+
+
+
+	<flow name="querySalesforceFlow">
+		<os:retrieve key="watermark" target="lastQueryDateSFDC"
+			xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+			doc:name="Retrieve lastQueryDateSfdc" objectStore="Object_store"
+			xmlns:os="http://www.mulesoft.org/schema/mule/os">&#13;
+        	<os:default-value><![CDATA[${sfdc.watermark.default.expression}]]></os:default-value>&#13;
+    	</os:retrieve>
+		<salesforce:query xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" doc:name="Query Accounts from Salesforce" doc:id="b6ee7f69-41e5-4cce-9d6f-5e1901002515" config-ref="Salesforce_Config" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce">&#13;
+			<ee:repeatable-file-store-iterable />
+			<salesforce:salesforce-query>SELECT AccountNumber, AccountSource, AnnualRevenue, BillingCity, BillingCountry, BillingPostalCode, BillingState, BillingStreet, Description, Fax, Id, Industry, LastModifiedById, LastModifiedDate, Name, NumberOfEmployees, OwnerId, Ownership, ParentId, Phone, Rating, ShippingCity, ShippingCountry, ShippingPostalCode, ShippingState, ShippingStreet, Sic, SicDesc, Site, TickerSymbol, Type, Website FROM Account WHERE LastModifiedDate &gt; :lastModifiedDate AND LastModifiedById != '${sfdc.integration.user.id}' ORDER BY LastModifiedDate ASC LIMIT 300</salesforce:salesforce-query>&#13;
+				<salesforce:parameters><![CDATA[#[output applicaton/java
+---
+{
+	"lastModifiedDate" : vars.lastQueryDateSFDC
+}]]]></salesforce:parameters>&#13;
+		</salesforce:query>
+		<logger level="INFO" doc:name="Logger" doc:id="03d8a9c4-47d1-4ee4-844b-d08db0d88ec3" message="#['Input SFDC data: ' ++ write(payload, 'application/json', {'indent': false})]"/>
+		<ee:transform doc:name="Set max modifyDateSfdc" doc:id="ff0b15b2-51b6-44ae-af6e-e3e5f073ce2a">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="maxDateSfdc" ><![CDATA[%dw 2.0
+output application/java
+---
+max(payload map $.LastModifiedDate)]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<os:store key="watermark" failOnNullValue="false" objectStore="Object_store" doc:name="Store lastQueryDateSfdc">
+			<os:value ><![CDATA[#[vars.maxDateSfdc]]]></os:value>
+    </os:store>
+
+    
+</flow>
+<flow name="queryDynamicsCrmFlow">
+		<os:retrieve doc:name="Retrieve lastQueryDateMsDyn" doc:id="93f3f01c-ffa9-4ea4-a1ad-20142224ec9a" key="watermark" objectStore="Object_store" target="lastQueryDateMsDyn">
+			<os:default-value><![CDATA[${msdyn.watermark.default.expression}]]></os:default-value>
+		</os:retrieve>
+		<set-variable value="${msdyn.integration.user.id}'" doc:name="Set integrationUserID" doc:id="6ac83e6e-45d6-474f-8988-aff0fa7c8e6e" variableName="integrationUserID"/>
+		<ee:transform doc:name="Prepare query" doc:id="3e86c1d1-077f-455b-a608-da950c75e677">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+{
+	
+	query: "dsql: SELECT accountid,accountnumber,description,modifiedby,modifiedon,name,new_salesforceid,numberofemployees,telephone1,revenue,tickersymbol, websiteurl, fax,sic FROM account WHERE modifiedon > " ++ vars.lastQueryDateMsDyn ++ " AND modifiedby_referenceto_systemuser <> " ++ vars.integrationUserID ++ " LIMIT 200"
+
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+		<microsoft-dynamics-crm:retrieve-multiple-by-query doc:name="Query MS Dynamics accounts"
+            doc:id="7eb3ff9b-80d9-4186-99a4-fea4aef66efc" config-ref="Microsoft_Dynamics_CRM_Dynamics_CRM">
+            <ee:repeatable-file-store-iterable />
+			<microsoft-dynamics-crm:query><![CDATA[#[payload.query]]]></microsoft-dynamics-crm:query>
+        </microsoft-dynamics-crm:retrieve-multiple-by-query>
+		<logger level="INFO" doc:name="Logger" doc:id="f857f3b4-ebfb-426e-8e47-87d62118aeee" message="#['Input MsDyn data: ' ++ write(payload, 'application/json', {'indent': false})]"/>
+		<ee:transform doc:name="Set max modifyDateDyn" doc:id="643e7c82-0086-4057-ae1f-7eab82525676" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="maxDateDyn" ><![CDATA[%dw 2.0
+output application/java
+---
+max(payload map $.modifiedon)]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<os:store key="watermark" failOnNullValue="false" objectStore="Object_store" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" doc:name="Store lastQueryDateMsDyn" xmlns:os="http://www.mulesoft.org/schema/mule/os">&#13;
+        <os:value><![CDATA[#[vars.maxDateDyn]]]></os:value>&#13;
+    </os:store>
+</flow>
+
+</mule>

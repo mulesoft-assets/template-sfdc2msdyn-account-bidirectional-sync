@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:microsoft-dynamics-crm="http://www.mulesoft.org/schema/mule/microsoft-dynamics-crm"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/microsoft-dynamics-crm http://www.mulesoft.org/schema/mule/microsoft-dynamics-crm/current/mule-microsoft-dynamics-crm.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+
+
+
+	<flow name="syncFromSalesforceToDynamicsCrm" doc:id="6dffd3e2-816a-49f1-97b8-d199f9a1a323">
+		<batch:job jobName="fromSalesforceBatch" doc:id="58738285-e3b0-4d65-b7e0-05ddd297bf7e">
+			<batch:process-records>
+				<batch:step name="getAccountInDynamicsCrmStep" doc:id="46741482-04fb-4d8e-8888-9448e0d93bc9">
+					<ee:transform doc:name="Set Variable Name"
+						doc:id="5ac62e7a-9f69-4b30-ae01-07ccf7198aa2">
+						<ee:message />
+						<ee:variables>
+							<ee:set-variable variableName="Name"><![CDATA[%dw 2.0
+output application/java
+---
+payload.Name replace "'" with "\'"]]></ee:set-variable>
+						</ee:variables>
+					</ee:transform>
+					<ee:transform doc:name="Set DB query"
+						doc:id="c47aabf5-ad6d-4141-9fd0-507849f6ceb6">
+						<ee:message>
+						</ee:message>
+						<ee:variables>
+							<ee:set-variable variableName="query"><![CDATA[%dw 2.0
+output application/java
+---
+"dsql:SELECT accountid,accountnumber,description,fax,modifiedbyname,modifiedon,name,new_salesforceid,numberofemployees,revenue,sic,telephone1,tickersymbol,websiteurl  FROM account WHERE name = '" ++ vars.Name ++ "'"
+]]></ee:set-variable>
+						</ee:variables>
+					</ee:transform>
+					<microsoft-dynamics-crm:retrieve-multiple-by-query
+						doc:name="query matching account in MS Dynamics" doc:id="61ea0681-9560-4a10-b719-ec141bab170c"
+						config-ref="Microsoft_Dynamics_CRM_Dynamics_CRM" target="accountData">
+						<ee:repeatable-file-store-iterable />
+						<microsoft-dynamics-crm:query><![CDATA[#[vars.query]]]></microsoft-dynamics-crm:query>
+					</microsoft-dynamics-crm:retrieve-multiple-by-query>
+					<ee:transform doc:name="Set Data from matching account"
+						doc:id="c119f87d-9095-4962-b961-efe507b06a0c">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload ++ {
+	IdCRM: if(sizeOf(vars.accountData) > 0) vars.accountData[0].accountid else null, 
+	LastModifiedDateCRM: if(sizeOf(vars.accountData) > 0) "2015-08-08T14:16:07Z" else null	
+//	vars.accountData[0].modifiedon	
+}]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+					<remove-variable doc:name="Remove Variable accountData"
+						doc:id="dc2a8789-aad5-4931-a9dd-385815696ac5" variableName="accountData" />
+				</batch:step>
+
+				<batch:step name="insertAccountToDynamicsCRM" doc:id="78a74ab4-9b91-416d-985a-acda2ac377ec"
+					acceptExpression="payload.IdCRM == null">
+					<batch:aggregator doc:name="Batch Aggregator"
+						doc:id="1ad86a98-643e-494a-a90a-32daab0b03cd" size="${page.size}">
+						<ee:transform doc:name="Map Accounts for insert"
+							doc:id="d484063f-6d81-42ce-98ef-7cec51b04673">
+							<ee:message>
+								<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload map {
+	accountnumber 		: $.AccountNumber,
+	description 		: $.Description,
+	fax 				: $.Fax,
+	name 				: $.Name,
+	numberofemployees 	: $.NumberOfEmployees,
+	sic 				: $.Sic,
+	tickersymbol 		: $.TickerSymbol,
+	new_salesforceid 	: $.Id,
+	revenue 			: $.AnnualRevenue,
+	telephone1 			: $.Phone,
+	websiteurl 			: $.Website
+		
+	}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<microsoft-dynamics-crm:create-multiple
+							doc:name="Insert account to DynCRM" doc:id="08d875b3-7f5e-400b-bcb2-37f836bbccc8"
+							config-ref="Microsoft_Dynamics_CRM_Dynamics_CRM" logicalName="account" />
+						<logger level="INFO" doc:name="Log insert"
+							doc:id="fbeb42b3-b5c3-44f0-addd-4ca9788f97f1" message="Insert in DynamicCRM: #[payload]" />
+					</batch:aggregator>
+				</batch:step>
+
+
+
+				<batch:step name="updateAccountInDatabase" doc:id="78a74ab4-9b91-416d-985a-acda2ac377eb"
+					acceptExpression="payload.IdCRM != null  and (payload.LastModifiedDateCRM &lt; payload.LastModifiedDate)">
+					<batch:aggregator doc:name="Batch Aggregator"
+						doc:id="1ad86a98-643e-494a-a90a-32daab0b03cc" size="${page.size}">
+						<ee:transform doc:name="Map Accounts for update"
+							doc:id="d484063f-6d81-42ce-98ef-7cec51b04672">
+							<ee:message>
+								<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload map {
+	id					: $.IdCRM,
+	accountnumber 		: $.AccountNumber,
+	description 		: $.Description,
+	fax 				: $.Fax,
+	name 				: $.Name,
+	numberofemployees 	: $.NumberOfEmployees,
+	sic 				: $.Sic,
+	tickersymbol 		: $.TickerSymbol,
+	new_salesforceid 	: $.Id,
+	revenue 			: $.AnnualRevenue,
+	telephone1 			: $.Phone,
+	websiteurl 			: $.Website
+		
+	}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<microsoft-dynamics-crm:update-multiple
+							logicalName="account" doc:name="Update account in DynCRM"
+							doc:id="89e5ed2a-36a8-4e74-8026-1f380f19f845" config-ref="Microsoft_Dynamics_CRM_Dynamics_CRM" />
+						<logger level="INFO" doc:name="Log update"
+							doc:id="fbeb42b3-b5c3-44f0-addd-4ca9788f97f0"
+							message="Update in DynamicCRM: #[write(payload, 'application/json', {'indent': false})]" />
+					</batch:aggregator>
+				</batch:step>
+			</batch:process-records>
+			<batch:on-complete>
+				<os:store key="syncState"
+					xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+					doc:name="Set sync state to fromDatabase" doc:id="f08de372-2fb9-4aef-80ca-f6da2241fc75"
+					objectStore="Object_store" xmlns:os="http://www.mulesoft.org/schema/mule/os">&#13;
+					<os:value><![CDATA[fromDynamicsCrm]]></os:value>&#13;
+				</os:store>
+			</batch:on-complete>
+		</batch:job>
+	</flow>
+	
+	<flow name="syncFromDynamicsCrmToSalesforce" doc:id="8759532e-79b7-4789-990c-dc8e162bfd67" >
+		<batch:job jobName="fromDynamicsCrmBatch" doc:id="204892ae-0d97-4326-beae-310c8d52b7a6">
+			<batch:process-records>
+				<batch:step name="getAccountFromSalesforceStep" doc:id="89713774-362a-4e92-9bdc-41e31802bf38">
+					<ee:transform doc:name="Set Variable Name" doc:id="ab8e839d-b310-4a19-a4c6-95914f1627d7">
+						<ee:message>
+						</ee:message>
+						<ee:variables>
+							<ee:set-variable variableName="Name" ><![CDATA[%dw 2.0
+output application/java
+---
+payload.name replace "'" with "\'"]]></ee:set-variable>
+						</ee:variables>
+					</ee:transform>
+					<salesforce:query-single doc:name="query matching account in Salesforce" doc:id="d8ff60c9-df2c-49bd-af44-6e2974d7b768" config-ref="Salesforce_Config" target="salesforceData">
+						<salesforce:salesforce-query >SELECT Id,  LastModifiedDate FROM Account WHERE Name = ':name'</salesforce:salesforce-query>
+						<salesforce:parameters ><![CDATA[#[output applicaton/java
+---
+{
+	"name" : vars.Name
+}]]]></salesforce:parameters>
+					</salesforce:query-single>
+					<ee:transform doc:name="Set Id and LastModifiedDate from matching account" doc:id="c119f87d-9095-4962-b961-efe507b06a0c">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload ++ {
+	(new_salesforceid: vars.salesforceData.Id) if vars.salesforceData.Id != null, 
+	(LastModifiedDateSFDC: vars.salesforceData.LastModifiedDate) if vars.salesforceData.LastModifiedDate != null,
+	
+}
+]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+					<remove-variable doc:name="Remove Variable IdDateInSalesforce" doc:id="7bbd9b67-7ebc-4886-a813-14dc7b00df30" variableName="salesforceData" />
+				
+</batch:step>
+				<batch:step name="upsertAccountInSalesforce" doc:id="78a74ab4-9b91-416d-985a-acda2ac377ec" acceptExpression="payload.accountid == null  or (payload.LastModifiedDateSFDC &lt; payload.modifiedon)">
+					<batch:aggregator doc:name="Batch Commit" doc:id="1ad86a98-643e-494a-a90a-32daab0b03cd" size="10">
+						<ee:transform doc:name="Map Accounts for insert" doc:id="d484063f-6d81-42ce-98ef-7cec51b04673">
+							<ee:message>
+								<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload map {
+	AccountNumber 		: $.accountnumber,
+	Description 		: $.description,
+	Fax 				: $.fax,
+	Name 				: $.name,
+	NumberOfEmployees 	: $.numberofemployees,
+	Sic 				: $.sic,
+	TickerSymbol 		: $.tickersymbol,
+	AnnualRevenue 		: $.revenue,
+	(id					: $.new_salesforceid) if $.new_salesforceid != null,
+	Phone 				: $.telephone1,
+	Website 			: $.webisteurl
+ }]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<salesforce:upsert-bulk doc:name="Insert or update Salesforce accounts" doc:id="525936a5-2183-41a3-9ea3-c4f1fd14020d" config-ref="Salesforce_Config" externalIdFieldName="Id" type="Account"/>
+						<logger level="ERROR" doc:name="Log upsert" doc:id="fbeb42b3-b5c3-44f0-addd-4ca9788f97f1" message="Upsert Salesforce A response: #[payload]"/>
+					</batch:aggregator>
+				</batch:step>
+			</batch:process-records>
+			<batch:on-complete >
+			<os:store key="syncState" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" doc:name="Set sync state to fromSalesforce" doc:id="f08de372-2fb9-4aef-80ca-f6da2241fc75" objectStore="Object_store" xmlns:os="http://www.mulesoft.org/schema/mule/os">&#13;
+					<os:value><![CDATA[fromSalesforce]]></os:value>&#13;
+			</os:store>
+			</batch:on-complete>
+		
+
+</batch:job>
+	</flow>
+	
+	
+	
+</mule>
