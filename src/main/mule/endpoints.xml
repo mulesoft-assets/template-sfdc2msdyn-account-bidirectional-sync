@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+<mule 
 	xmlns:microsoft-dynamics-crm="http://www.mulesoft.org/schema/mule/microsoft-dynamics-crm"
 	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
 	xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
@@ -11,9 +11,7 @@ http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/cor
 http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
 http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
-http://www.mulesoft.org/schema/mule/microsoft-dynamics-crm http://www.mulesoft.org/schema/mule/microsoft-dynamics-crm/current/mule-microsoft-dynamics-crm.xsd
-http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
-
+http://www.mulesoft.org/schema/mule/microsoft-dynamics-crm http://www.mulesoft.org/schema/mule/microsoft-dynamics-crm/current/mule-microsoft-dynamics-crm.xsd">
 
 	<flow name="schedulerFlow" doc:id="aff4106d-d2f6-4366-940a-a380dcb1cf73">
 		<scheduler doc:name="Scheduler" doc:id="58b7c776-fbee-4753-9bea-f6cc3e037efd">
@@ -84,16 +82,15 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 			xmlns:os="http://www.mulesoft.org/schema/mule/os">&#13;
         	<os:default-value><![CDATA[${sfdc.watermark.default.expression}]]></os:default-value>&#13;
     	</os:retrieve>
-		<salesforce:query xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" doc:name="Query Accounts from Salesforce" doc:id="b6ee7f69-41e5-4cce-9d6f-5e1901002515" config-ref="Salesforce_Config" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce">&#13;
-			<ee:repeatable-file-store-iterable />
-			<salesforce:salesforce-query>SELECT AccountNumber, AccountSource, AnnualRevenue, BillingCity, BillingCountry, BillingPostalCode, BillingState, BillingStreet, Description, Fax, Id, Industry, LastModifiedById, LastModifiedDate, Name, NumberOfEmployees, OwnerId, Ownership, ParentId, Phone, Rating, ShippingCity, ShippingCountry, ShippingPostalCode, ShippingState, ShippingStreet, Sic, SicDesc, Site, TickerSymbol, Type, Website FROM Account WHERE LastModifiedDate &gt; :lastModifiedDate AND LastModifiedById != '${sfdc.integration.user.id}' ORDER BY LastModifiedDate ASC LIMIT 300</salesforce:salesforce-query>&#13;
+		<salesforce:query xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" doc:name="Query Accounts from Salesforce" doc:id="b6ee7f69-41e5-4cce-9d6f-5e1901002515" config-ref="Salesforce_Config" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce">
+			<salesforce:salesforce-query>SELECT AccountNumber, AccountSource, AnnualRevenue, BillingCity, BillingCountry, BillingPostalCode, BillingState, BillingStreet, Description, Fax, Id, Industry, LastModifiedById, LastModifiedDate, Name, NumberOfEmployees, OwnerId, Ownership, ParentId, Phone, Rating, ShippingCity, ShippingCountry, ShippingPostalCode, ShippingState, ShippingStreet, Sic, SicDesc, Site, TickerSymbol, Type, Website FROM Account WHERE LastModifiedDate &gt; :lastModifiedDate AND LastModifiedById != '${sfdc.integration.user.id}' ORDER BY LastModifiedDate ASC LIMIT 100</salesforce:salesforce-query>&#13;
 				<salesforce:parameters><![CDATA[#[output applicaton/java
 ---
 {
 	"lastModifiedDate" : vars.lastQueryDateSFDC
 }]]]></salesforce:parameters>&#13;
 		</salesforce:query>
-		<logger level="INFO" doc:name="Logger" doc:id="03d8a9c4-47d1-4ee4-844b-d08db0d88ec3" message="#['Input SFDC data: ' ++ write(payload, 'application/json', {'indent': false})]"/>
+		<logger level="INFO" doc:name="Logger" doc:id="03d8a9c4-47d1-4ee4-844b-d08db0d88ec3" message="Input SFDC data:  #[output application/json --- payload]"/>
 		<ee:transform doc:name="Set max modifyDateSfdc" doc:id="ff0b15b2-51b6-44ae-af6e-e3e5f073ce2a">
 			<ee:message>
 			</ee:message>
@@ -114,25 +111,22 @@ max(payload map $.LastModifiedDate)]]></ee:set-variable>
 		<os:retrieve doc:name="Retrieve lastQueryDateMsDyn" doc:id="93f3f01c-ffa9-4ea4-a1ad-20142224ec9a" key="watermark" objectStore="Object_store" target="lastQueryDateMsDyn">
 			<os:default-value><![CDATA[${msdyn.watermark.default.expression}]]></os:default-value>
 		</os:retrieve>
-		<set-variable value="${msdyn.integration.user.id}'" doc:name="Set integrationUserID" doc:id="6ac83e6e-45d6-474f-8988-aff0fa7c8e6e" variableName="integrationUserID"/>
+		<set-variable value="${msdyn.integration.user.id}" doc:name="Set integrationUserID" doc:id="6ac83e6e-45d6-474f-8988-aff0fa7c8e6e" variableName="integrationUserID"/>
 		<ee:transform doc:name="Prepare query" doc:id="3e86c1d1-077f-455b-a608-da950c75e677">
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/java
 ---
 {
-	
-	query: "dsql: SELECT accountid,accountnumber,description,modifiedby,modifiedon,name,new_salesforceid,numberofemployees,telephone1,revenue,tickersymbol, websiteurl, fax,sic FROM account WHERE modifiedon > " ++ vars.lastQueryDateMsDyn ++ " AND modifiedby_referenceto_systemuser <> " ++ vars.integrationUserID ++ " LIMIT 200"
-
+query: "dsql: SELECT accountid,accountnumber,description,modifiedby,modifiedon,name,new_salesforceid,numberofemployees,telephone1,revenue,tickersymbol, websiteurl, fax,sic FROM account WHERE modifiedon > '" ++ vars.lastQueryDateMsDyn ++ "' AND modifiedby_referenceto_systemuser <> '" ++ vars.integrationUserID ++ "' LIMIT 100"
 }]]></ee:set-payload>
             </ee:message>
         </ee:transform>
 		<microsoft-dynamics-crm:retrieve-multiple-by-query doc:name="Query MS Dynamics accounts"
             doc:id="7eb3ff9b-80d9-4186-99a4-fea4aef66efc" config-ref="Microsoft_Dynamics_CRM_Dynamics_CRM">
-            <ee:repeatable-file-store-iterable />
 			<microsoft-dynamics-crm:query><![CDATA[#[payload.query]]]></microsoft-dynamics-crm:query>
         </microsoft-dynamics-crm:retrieve-multiple-by-query>
-		<logger level="INFO" doc:name="Logger" doc:id="f857f3b4-ebfb-426e-8e47-87d62118aeee" message="#['Input MsDyn data: ' ++ write(payload, 'application/json', {'indent': false})]"/>
+		<logger level="INFO" doc:name="Logger" doc:id="f857f3b4-ebfb-426e-8e47-87d62118aeee" message="Input MsDyn data:  #[output apllication/json --- payload]"/>
 		<ee:transform doc:name="Set max modifyDateDyn" doc:id="643e7c82-0086-4057-ae1f-7eab82525676" >
 			<ee:message >
 			</ee:message>
