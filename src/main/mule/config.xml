@@ -23,7 +23,7 @@ http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/cu
 	<salesforce:sfdc-config name="Salesforce_Config"
 		doc:name="Salesforce Config" doc:id="30f302ae-5ebe-4a01-8ed8-dc9de37d5b26">
 		<salesforce:basic-connection username="${sfdc.username}"
-			password="${sfdc.password}" securityToken="${sfdc.securityToken}"/>
+			password="${sfdc.password}" securityToken="${sfdc.securityToken}" />
 	</salesforce:sfdc-config>
 	<configuration-properties doc:name="Configuration properties"
 		doc:id="8ed317fb-08f6-4fe4-8568-a3c0d785a524" file="mule.${mule.env}.properties" />
@@ -33,6 +33,7 @@ http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/cu
 		doc:id="f8e049fd-7a0a-432e-8a5f-bf1e19a47fe4" config-ref="ObjectStore_Config" />
 	<configuration-properties doc:name="Configuration properties"
 		doc:id="12814841-3109-4499-9313-210df77c594e" file="common.properties" />
-
+	<global-property doc:name="Global Property" name="mule.env"
+		value="dev" />
 
 </mule>
