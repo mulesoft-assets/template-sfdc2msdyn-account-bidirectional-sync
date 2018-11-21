@@ -8,7 +8,7 @@
     </parent>
     <artifactId>template-sfdc2msdyn-account-bidirectional-sync</artifactId>
     <packaging>mule-application</packaging>
-    <version>2.1.0</version>
+    <version>2.1.1-SNAPSHOT</version>
     <name>template-sfdc2msdyn-account-bidirectional-sync</name>
     <properties>
         <microsoft.dynamics.crm.connector.version>3.1.1</microsoft.dynamics.crm.connector.version>
@@ -57,8 +57,4 @@
             </plugin>
         </plugins>
     </build>
-
-  <scm>
-    <tag>v2.1.0</tag>
-  </scm>
 </project>
