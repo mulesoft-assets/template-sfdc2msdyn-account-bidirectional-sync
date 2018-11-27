@@ -42,7 +42,7 @@ The question for recent changes since a certain moment in nothing but a [Schedul
 <!-- Default Considerations (end) -->
 
 <!-- Considerations (start) -->
-To make this Anypoint Template run, there are certain preconditions that must be considered. All of them deal with the preparations in both, that must be made in order for all to run smoothly.
+To make this template run, there are certain preconditions that must be considered. All of them deal with the preparations in both, that must be made for the template to run smoothly.
 
 **Failing to do so could lead to unexpected behavior of the template.**
 
@@ -91,14 +91,14 @@ There are no considerations with using Salesforce as a data destination.
 
 ### As a Data Source
 
-In order for this Anypoint Template to work, a custom field **new_salesforceid** has to be defined for Accounts. Please find more information [here](https://technet.microsoft.com/en-us/library/dn531187.aspx).
+In order for this template to work, a custom field **new_salesforceid** has to be defined for Accounts. Please find more information [here](https://technet.microsoft.com/en-us/library/dn531187.aspx).
 
-There are no other particular considerations for this Anypoint Template regarding Microsoft Dynamics CRM as data origin.
+There are no other particular considerations for this template regarding Microsoft Dynamics CRM as data origin.
 ### As a Data Destination
 
-In order for this Anypoint Template to work, a custom field **new_salesforceid** has to be defined for Accounts. Please find more information [here](https://technet.microsoft.com/en-us/library/dn531187.aspx).
+In order for this template to work, a custom field **new_salesforceid** has to be defined for Accounts. Please find more information [here](https://technet.microsoft.com/en-us/library/dn531187.aspx).
 
-There are no other particular considerations for this Anypoint Template regarding Microsoft Dynamics CRM as data destination.
+There are no other particular considerations for this template regarding Microsoft Dynamics CRM as data destination.
 
 
 
@@ -165,7 +165,7 @@ In Studio, right click your project name in Package Explorer and select Anypoint
 To use this template, configure properties such as credentials, configurations, etc.) in the properties file or in CloudHub from Runtime Manager > Manage Application > Properties. The sections that follow list example values.
 ### Application Configuration
 <!-- Application Configuration (start) -->
-**Application configuration**
+**Application Configuration**
  
 + scheduler.frequency `10000`
 + scheduler.startDelay 0 
@@ -238,7 +238,7 @@ The second *fromDynamicsCrmBatch* batch job works in the same way, but in the op
 
 ## endpoints.xml
 <!-- Default Endpoints XML (start) -->
-This is the file where you will found the inbound and outbound sides of your integration app. These flows has Error handling that basically consists on invoking the *On error propagate* defined in *errorHandling.xml* file.
+This file provides the inbound and outbound sides of your integration app. These flows has Error handling that basically consists on invoking the *On error propagate* defined in *errorHandling.xml* file.
 It is intented to define the application API.<!-- Default Endpoints XML (end) -->
 
 <!-- Endpoints XML (start) -->
