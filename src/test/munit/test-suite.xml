@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule
+	xmlns:microsoft-dynamics-crm="http://www.mulesoft.org/schema/mule/microsoft-dynamics-crm"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:munit="http://www.mulesoft.org/schema/mule/munit"
+	xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/microsoft-dynamics-crm http://www.mulesoft.org/schema/mule/microsoft-dynamics-crm/current/mule-microsoft-dynamics-crm.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	
+	<munit:config name="test-suite.xml" doc:name="MUnit configuration" />
+	<configuration-properties doc:name="Configuration properties"
+		doc:id="c382dc50-b83c-41be-ad31-42ccb929d758" file="mule.test.properties" />
+	<munit:before-test name="test-suiteBefore_Test"
+		description="Before tests actions" doc:id="7f8facb1-95ae-4456-9448-faf3a3a89dc9">
+		<ee:transform doc:name="Prepare MS Dynamics accounts request" doc:id="ff119ee5-f65e-4dd3-a1e0-b7c732c2a861">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="testAccount2" ><![CDATA[%dw 2.0
+output application/java
+var generateId = randomInt(100000)
+---
+{	
+	name: "MunitTestName" ++ " " ++ generateId,
+	description: "MunitTestDescription" ++ generateId
+}]]></ee:set-variable>
+				<ee:set-variable variableName="testAccount1" ><![CDATA[%dw 2.0
+output application/java
+var generateId = randomInt(100000)
+---
+{	
+	name: "MunitTestName" ++ " " ++ generateId,
+	description: "MunitTestDescription" ++ generateId
+}]]></ee:set-variable>
+				<ee:set-variable variableName="testAccount3" ><![CDATA[%dw 2.0
+output application/java
+var generateId = randomInt(100000)
+---
+{	
+	name: "MunitTestName" ++ " " ++ generateId,
+	description: "MunitTestDescription" ++ generateId
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<microsoft-dynamics-crm:create-multiple logicalName="account" doc:name="Create Accounts in MS Dynamics" doc:id="41563e8c-946d-40e9-a323-7f720c16da7c" config-ref="Microsoft_Dynamics_CRM_Dynamics_CRM">
+			<microsoft-dynamics-crm:list-of-attributes><![CDATA[#[[vars.testAccount1, vars.testAccount2]]]]></microsoft-dynamics-crm:list-of-attributes>
+		</microsoft-dynamics-crm:create-multiple>
+		<set-variable value="#[payload.items map ($.id)]" doc:name="Save IDs to variable msdynIds" doc:id="8505976a-808c-4d4d-973a-802603935f44" variableName="msdynIds" />
+		<salesforce:create doc:name="Create Account in SFDC" doc:id="6e3a84f4-6cbc-475c-8616-86d12f47819e" config-ref="Salesforce_Config" type="Account">
+			<salesforce:records ><![CDATA[#[[{	
+	Name: vars.testAccount2.name,
+	Description: "Description" ++ randomInt(10000)
+},
+{		
+	Name: vars.testAccount3.name,
+	Description: vars.testAccount3.description
+}
+]]]]></salesforce:records>
+		</salesforce:create>
+		<set-variable value="#[payload map $.id]" doc:name="Store IDs to variable sfdcIds" doc:id="623a0d4f-c873-45e6-a7ee-89bc1e194721" variableName="sfdcIds" />
+	</munit:before-test>
+	<munit:test name="test-suite-FromSfdcToMsDynFlowTest" description="Test" doc:id="9614af0c-4579-464e-8e9f-aee5c228be35" >
+		<munit:execution >
+			<scripting:execute doc:name="Sleep for 5s before we start tests" doc:id="84fd4ef6-273c-42ed-8637-dd9b07f30e91" engine="groovy">
+				<scripting:code >sleep(5000)</scripting:code>
+			</scripting:execute>
+			<flow-ref doc:name="Call Query Sfdc Flow" doc:id="ad1eadfb-137c-49bb-921f-7c34e42449be" name="querySalesforceFlow"/>
+			<ee:transform doc:name="Filter test records from Sfdc" doc:id="ad968730-eea6-4972-80c5-7937043dc7a3" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload filter ($.Name == vars.testAccount3.name or $.Name == vars.testAccount2.name)]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<flow-ref doc:name="Call Business Logic Flow" doc:id="66efefb6-718f-469c-9752-7c5a84a00574" name="syncFromSalesforceToDynamicsCrm"/>
+			<scripting:execute doc:name="Sleep for 30s until the processing is completed" doc:id="72b97b76-70df-4e77-ae5e-ff0c0c1c5d09" engine="groovy">
+				<scripting:code >sleep(30000)</scripting:code>
+			</scripting:execute>
+			<ee:transform doc:name="Query Request for MS Dynamics" doc:id="a27b5e5b-1b3f-4f30-b2a7-01792ff42ffd" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="query" ><![CDATA[%dw 2.0
+output application/java
+---
+"dsql:SELECT accountid,modifiedon,name, description FROM account WHERE name = '$(vars.testAccount1.name)' OR name = '$(vars.testAccount2.name)' OR name = '$(vars.testAccount3.name)'"]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<microsoft-dynamics-crm:retrieve-multiple-by-query doc:name="Retrieve multiple by query" doc:id="4ace19fb-478c-4f4c-84f9-7eb3d647729d" config-ref="Microsoft_Dynamics_CRM_Dynamics_CRM">
+				<microsoft-dynamics-crm:query ><![CDATA[#[vars.query]]]></microsoft-dynamics-crm:query>
+			</microsoft-dynamics-crm:retrieve-multiple-by-query>
+			<ee:transform doc:name="Filter test records from Salesforce" doc:id="077751bc-ec61-48c9-9222-9e13275b7b66">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="createdRecord"><![CDATA[%dw 2.0
+output application/java
+---
+payload filter ($.name == vars.testAccount3.name)]]></ee:set-variable>
+					<ee:set-variable variableName="msdynIds" ><![CDATA[%dw 2.0
+output application/java
+---
+payload map ($.accountid)]]></ee:set-variable>
+					<ee:set-variable variableName="notupdatedRecord" ><![CDATA[%dw 2.0
+output application/java
+---
+payload filter ($.name == vars.testAccount2.name and $.description == vars.testAccount2.description)]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform> 
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-that doc:name="Assert that Account was created" doc:id="d193c80f-d085-428c-a3a7-8190fd480c28" expression="#[sizeOf(vars.createdRecord)]" message="Account should be created" is="#[MunitTools::equalTo(1)]"/>
+			<munit-tools:assert-that doc:name="Assert that Account was not updated" doc:id="3ec99282-d88f-42ad-8329-bb382dd63828" expression="#[sizeOf(vars.notupdatedRecord)]" is="#[MunitTools::equalTo(1)]" message="Account shouldn't be updated"/>
+			<munit-tools:verify-call doc:name="Verify MSDyn Create call" doc:id="234041b0-1bf9-4c38-afd9-1d92fea731df" processor="microsoft-dynamics-crm:create" times="1"/>
+			<munit-tools:verify-call doc:name="Verify MSDyn Update call " doc:id="b4a51495-3887-4ec4-a827-1664d0314d8b" processor="microsoft-dynamics-crm:update" times="0"/>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="test-suite-FromMSDynToSfdcFlowTest" description="Test" doc:id="42961e95-a7e4-495a-98e7-dd8ff02d4113" >
+		<munit:execution >
+			<scripting:execute doc:name="Sleep for 5s before we start tests" doc:id="d964aa0b-163c-4450-9e4e-acfa6fd0b789" engine="groovy">
+				<scripting:code >sleep(5000)</scripting:code>
+			</scripting:execute>
+			<flow-ref doc:name="Call Query MS Dynamics Flow" doc:id="475b5f59-2ce8-4ff9-aae9-4bbc60d1a11b" name="queryDynamicsCrmFlow"/>
+			<ee:transform doc:name="Filter test records from MS Dynamics" doc:id="ef16de90-2ddc-4caf-84c1-23223b973a53" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload filter ($.name == vars.testAccount1.name or $.name == vars.testAccount2.name)]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<flow-ref doc:name="Call Business Logic Flow" doc:id="073b1e91-23e7-41b9-9ffa-08c48b75edfa" name="syncFromDynamicsCrmToSalesforce"/>
+			<scripting:execute doc:name="Sleep for 30s until the processing is completed" doc:id="18ac7f0c-8935-4dbb-8fa5-14b0914754b9" engine="groovy">
+				<scripting:code >sleep(30000)</scripting:code>
+			</scripting:execute>
+			<salesforce:query doc:name="Select test accounts in SFDC" doc:id="5be22e79-7788-4002-aff0-f54b6b5c1186" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query>SELECT Id, Name, Description FROM Account WHERE Name IN (':name1', ':name2', ':name3')</salesforce:salesforce-query>
+			<salesforce:parameters><![CDATA[#[output application/java
+---
+{
+	"name1" : vars.testAccount1.name,
+	"name2" : vars.testAccount2.name,
+	"name3" : vars.testAccount3.name
+}]]]></salesforce:parameters>
+		</salesforce:query>
+			<ee:transform doc:name="Filter test records from Salesforce" doc:id="36b9246e-8afc-49f0-af2f-89fd4ed3251b">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="createdRecord"><![CDATA[%dw 2.0
+output application/java
+---
+payload filter ($.Name == vars.testAccount1.name)]]></ee:set-variable>
+				<ee:set-variable variableName="updatedRecord"><![CDATA[%dw 2.0
+output application/java
+---
+payload filter ($.Name == vars.testAccount2.name and $.Description == vars.testAccount2.description)]]></ee:set-variable>
+				<ee:set-variable variableName="sfdcIds"><![CDATA[%dw 2.0
+output application/java
+---
+payload map ($.Id)]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform> 
+		</munit:execution>
+		<munit:validation>
+			<munit-tools:assert-that doc:name="Assert that Account was created" doc:id="842f69e8-0244-4606-acc8-a2dfc1da4497" expression="#[sizeOf(vars.createdRecord)]" is="#[MunitTools::equalTo(1)]" message="Account should be created" />
+			<munit-tools:assert-that doc:name="Assert that Account was updated" doc:id="265deb8b-53a1-4850-beaa-ab907cbc4dd8" expression="#[sizeOf(vars.updatedRecord)]" is="#[MunitTools::equalTo(1)]" message="Account should be updated" />
+			<munit-tools:verify-call doc:name="Verify Sfdc Upsert Call" doc:id="3726918b-46c5-49d8-9b35-cf133e68367d" processor="salesforce:upsert" times="1" />
+		</munit:validation>
+	</munit:test>
+		
+	<munit:after-test name="test-suiteAfter_Test" description="After tests actions" doc:id="5b85bb9e-67e6-47f7-8f71-53a39f147fc8" >
+	<salesforce:delete doc:name="Delete test accounts in SFDC" doc:id="3c7258cd-495f-42d9-a39b-8d816b30e379" config-ref="Salesforce_Config">
+			<salesforce:delete-ids><![CDATA[#[vars.sfdcIds]]]></salesforce:delete-ids>
+		</salesforce:delete>
+		<microsoft-dynamics-crm:delete-multiple logicalName="account" doc:name="Delete test accounts in MS Dynamics" doc:id="b4cceca1-6365-4345-9fda-1ea46ac7d648" config-ref="Microsoft_Dynamics_CRM_Dynamics_CRM" ids="#[vars.msdynIds]">
+		</microsoft-dynamics-crm:delete-multiple>
+	</munit:after-test>
+
+
+</mule>

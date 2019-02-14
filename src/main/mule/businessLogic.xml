@@ -28,7 +28,7 @@ http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/cu
 output application/java
 var accountName = payload.Name replace "'" with "\'"
 ---
-"dsql:SELECT accountid,accountnumber,description,fax,modifiedbyname,modifiedon,name,new_salesforceid,numberofemployees,revenue,sic,telephone1,tickersymbol,websiteurl  FROM account WHERE name = '$(accountName)'"
+"dsql:SELECT accountid,modifiedon,name  FROM account WHERE name = '$(accountName)'"
 ]]></ee:set-variable>
 							<ee:set-variable variableName="accountData" ><![CDATA[%dw 2.0
 output application/java
@@ -58,7 +58,7 @@ vars.accountData ++ {
 				</batch:step>
 
 				<batch:step name="insertAccountToDynamicsCRM" doc:id="78a74ab4-9b91-416d-985a-acda2ac377ec"
-					acceptExpression="payload.IdCRM == null">
+					acceptExpression="#[payload.IdCRM == null]">
 						<ee:transform doc:name="Map Accounts for insert"
 							doc:id="d484063f-6d81-42ce-98ef-7cec51b04673">
 							<ee:message>
@@ -73,23 +73,28 @@ output application/java
 	(numberofemployees 	: payload.NumberOfEmployees as Number) if(payload.NumberOfEmployees !=null) ,
 	(sic 				: payload.Sic) if(payload.Sic !=null) ,
 	(tickersymbol 		: payload.TickerSymbol) if(payload.TickerSymbol !=null) ,
-	(new_salesforceid 	: payload.Id) if(payload.Id !=null) ,
 	(revenue 			: payload.AnnualRevenue) if(payload.AnnualRevenue !=null) ,
 	(telephone1 			: payload.Phone) if(payload.Phone !=null) ,
 	(websiteurl 			: payload.Website) if(payload.Website !=null)
 		
 }]]></ee:set-payload>
 							</ee:message>
+						<ee:variables >
+							<ee:set-variable variableName="accountData" ><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-variable>
+						</ee:variables>
 						</ee:transform>
 						<microsoft-dynamics-crm:create logicalName="account" doc:name="Insert account to DynCRM" doc:id="9fe76c25-ed3c-4b59-aec6-ab055be1a869" config-ref="Microsoft_Dynamics_CRM_Dynamics_CRM"/>
-						<logger level="INFO" doc:name="Log insert"
-							doc:id="fbeb42b3-b5c3-44f0-addd-4ca9788f97f1" message="Insert in DynamicCRM: #[output application/json --- payload]" />
+						<logger level="INFO" doc:name="Log insert" doc:id="fbeb42b3-b5c3-44f0-addd-4ca9788f97f1" message="Insert in DynamicCRM: #[output application/json --- payload]" />
+					<set-payload value="#[vars.accountData]" doc:name="Set Payload from variable" doc:id="d5905370-23e4-463a-9e3c-015a254a1a52" mimeType="application/java"/>
 				</batch:step>
 
 
 
 				<batch:step name="updateAccountInCRM" doc:id="78a74ab4-9b91-416d-985a-acda2ac377eb"
-					acceptExpression="payload.IdCRM != null  and (payload.LastModifiedDateCRM &lt; payload.LastModifiedDate)">
+					acceptExpression="#[payload.IdCRM != null  and (payload.LastModifiedDateCRM &lt; payload.LastModifiedDate)]">
 						<ee:transform doc:name="Map Accounts for update"
 							doc:id="d484063f-6d81-42ce-98ef-7cec51b04672">
 							<ee:message>
@@ -104,23 +109,26 @@ output application/java
 	(numberofemployees 	: payload.NumberOfEmployees as Number) if(payload.NumberOfEmployees !=null) ,
 	(sic 				: payload.Sic) if(payload.Sic !=null) ,
 	(tickersymbol 		: payload.TickerSymbol) if(payload.TickerSymbol !=null) ,
-	(new_salesforceid 	: payload.Id) if(payload.Id !=null) ,
 	(revenue 			: payload.AnnualRevenue) if(payload.AnnualRevenue !=null) ,
-	(telephone1 			: payload.Phone) if(payload.Phone !=null) ,
-	(websiteurl 			: payload.Website) if(payload.Website !=null)
-		
+	(telephone1 		: payload.Phone) if(payload.Phone !=null) ,
+	(websiteurl 		: payload.Website) if(payload.Website !=null)		
 }]]></ee:set-payload>
 							</ee:message>
 						<ee:variables >
-							<ee:set-variable variableName="id" ><![CDATA[%dw 2.0
+							<ee:set-variable variableName="msdynId" ><![CDATA[%dw 2.0
 output application/java
 ---
 payload.IdCRM]]></ee:set-variable>
+							<ee:set-variable variableName="accountData" ><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-variable>
 						</ee:variables>
 						
 </ee:transform>
-					<microsoft-dynamics-crm:update logicalName="account" doc:name="Update account to DynCRM" doc:id="55220d08-67c9-4998-8768-679a900b77da" config-ref="Microsoft_Dynamics_CRM_Dynamics_CRM" id="#[vars.id]"/>
-						<logger level="INFO" doc:name="Log update" doc:id="25072288-27cf-410c-bb59-2063fe4aae04" message="Update in DynamicCRM: #[output application/json --- payload]"/>
+					<microsoft-dynamics-crm:update logicalName="account" doc:name="Update account to DynCRM" doc:id="55220d08-67c9-4998-8768-679a900b77da" config-ref="Microsoft_Dynamics_CRM_Dynamics_CRM" id="#[vars.msdynId]"/>
+					<logger level="INFO" doc:name="Log update" doc:id="25072288-27cf-410c-bb59-2063fe4aae04" message="Update in DynamicCRM: #[output application/json --- payload]"/>
+					<set-payload value="#[vars.accountData]" doc:name="Set Payload from variable" doc:id="ee7bc948-67b4-4611-b779-f227597b241a" />
 				</batch:step>
 			</batch:process-records>
 			<batch:on-complete>
