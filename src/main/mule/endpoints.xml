@@ -90,7 +90,6 @@ http://www.mulesoft.org/schema/mule/microsoft-dynamics-crm http://www.mulesoft.o
 	"lastModifiedDate" : vars.lastQueryDateSFDC
 }]]]></salesforce:parameters>&#13;
 		</salesforce:query>
-		<logger level="INFO" doc:name="Logger" doc:id="03d8a9c4-47d1-4ee4-844b-d08db0d88ec3" message="Input SFDC data:  #[output application/json --- payload]"/>
 		<ee:transform doc:name="Set max modifyDateSfdc" doc:id="ff0b15b2-51b6-44ae-af6e-e3e5f073ce2a">
 			<ee:message>
 			</ee:message>
@@ -118,7 +117,7 @@ max(payload map $.LastModifiedDate)]]></ee:set-variable>
 output application/java
 ---
 {
-query: "dsql: SELECT accountid,accountnumber,description,modifiedby,modifiedon,name,new_salesforceid,numberofemployees,telephone1,revenue,tickersymbol, websiteurl, fax,sic FROM account WHERE modifiedon > '" ++ vars.lastQueryDateMsDyn ++ "' AND modifiedby_referenceto_systemuser <> '" ++ vars.integrationUserID ++ "' LIMIT 100"
+query: "dsql: SELECT accountid,accountnumber,description,modifiedby,modifiedon,name,numberofemployees,telephone1,revenue,tickersymbol, websiteurl, fax,sic FROM account WHERE modifiedon > '" ++ vars.lastQueryDateMsDyn ++ "' AND modifiedby_referenceto_systemuser <> '" ++ vars.integrationUserID ++ "' LIMIT 100"
 }]]></ee:set-payload>
             </ee:message>
         </ee:transform>
@@ -126,7 +125,6 @@ query: "dsql: SELECT accountid,accountnumber,description,modifiedby,modifiedon,n
             doc:id="7eb3ff9b-80d9-4186-99a4-fea4aef66efc" config-ref="Microsoft_Dynamics_CRM_Dynamics_CRM">
 			<microsoft-dynamics-crm:query><![CDATA[#[payload.query]]]></microsoft-dynamics-crm:query>
         </microsoft-dynamics-crm:retrieve-multiple-by-query>
-		<logger level="INFO" doc:name="Logger" doc:id="f857f3b4-ebfb-426e-8e47-87d62118aeee" message="Input MsDyn data:  #[output apllication/json --- payload]"/>
 		<ee:transform doc:name="Set max modifyDateDyn" doc:id="643e7c82-0086-4057-ae1f-7eab82525676" >
 			<ee:message >
 			</ee:message>
