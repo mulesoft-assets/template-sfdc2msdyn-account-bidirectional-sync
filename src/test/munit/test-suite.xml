@@ -49,12 +49,8 @@ var generateId = randomInt(100000)
 }]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<microsoft-dynamics-crm:create-multiple logicalName="account" doc:name="Create Accounts in MS Dynamics" doc:id="41563e8c-946d-40e9-a323-7f720c16da7c" config-ref="Microsoft_Dynamics_CRM_Dynamics_CRM">
-			<microsoft-dynamics-crm:list-of-attributes><![CDATA[#[[vars.testAccount1, vars.testAccount2]]]]></microsoft-dynamics-crm:list-of-attributes>
-		</microsoft-dynamics-crm:create-multiple>
-		<set-variable value="#[payload.items map ($.id)]" doc:name="Save IDs to variable msdynIds" doc:id="8505976a-808c-4d4d-973a-802603935f44" variableName="msdynIds" />
 		<salesforce:create doc:name="Create Account in SFDC" doc:id="6e3a84f4-6cbc-475c-8616-86d12f47819e" config-ref="Salesforce_Config" type="Account">
-			<salesforce:records ><![CDATA[#[[{	
+			<salesforce:records><![CDATA[#[[{	
 	Name: vars.testAccount2.name,
 	Description: "Description" ++ randomInt(10000)
 },
@@ -65,12 +61,16 @@ var generateId = randomInt(100000)
 ]]]]></salesforce:records>
 		</salesforce:create>
 		<set-variable value="#[payload map $.id]" doc:name="Store IDs to variable sfdcIds" doc:id="623a0d4f-c873-45e6-a7ee-89bc1e194721" variableName="sfdcIds" />
+		<scripting:execute doc:name="Sleep for 5s before we start tests" doc:id="84fd4ef6-273c-42ed-8637-dd9b07f30e91" engine="groovy">
+				<scripting:code>sleep(5000)</scripting:code>
+			</scripting:execute>
+		<microsoft-dynamics-crm:create-multiple logicalName="account" doc:name="Create Accounts in MS Dynamics" doc:id="41563e8c-946d-40e9-a323-7f720c16da7c" config-ref="Microsoft_Dynamics_CRM_Dynamics_CRM">
+			<microsoft-dynamics-crm:list-of-attributes><![CDATA[#[[vars.testAccount1, vars.testAccount2]]]]></microsoft-dynamics-crm:list-of-attributes>
+		</microsoft-dynamics-crm:create-multiple>
+		<set-variable value="#[payload.items map ($.id)]" doc:name="Save IDs to variable msdynIds" doc:id="8505976a-808c-4d4d-973a-802603935f44" variableName="msdynIds" />
 	</munit:before-test>
 	<munit:test name="test-suite-FromSfdcToMsDynFlowTest" description="Test" doc:id="9614af0c-4579-464e-8e9f-aee5c228be35" >
 		<munit:execution >
-			<scripting:execute doc:name="Sleep for 5s before we start tests" doc:id="84fd4ef6-273c-42ed-8637-dd9b07f30e91" engine="groovy">
-				<scripting:code >sleep(5000)</scripting:code>
-			</scripting:execute>
 			<flow-ref doc:name="Call Query Sfdc Flow" doc:id="ad1eadfb-137c-49bb-921f-7c34e42449be" name="querySalesforceFlow"/>
 			<ee:transform doc:name="Filter test records from Sfdc" doc:id="ad968730-eea6-4972-80c5-7937043dc7a3" >
 				<ee:message >
