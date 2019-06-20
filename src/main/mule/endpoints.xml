@@ -80,7 +80,7 @@ http://www.mulesoft.org/schema/mule/microsoft-dynamics-crm http://www.mulesoft.o
 			xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
 			doc:name="Retrieve lastQueryDateSfdc" objectStore="Object_store"
 			xmlns:os="http://www.mulesoft.org/schema/mule/os">&#13;
-        	<os:default-value><![CDATA[#[read(p('.sfdcwatermark.default.expression'))]]]></os:default-value>&#13;
+        	<os:default-value><![CDATA[#[read(p('sfdc.watermark.default.expression'))]]]></os:default-value>&#13;
     	</os:retrieve>
 		<salesforce:query xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" doc:name="Query Accounts from Salesforce" doc:id="b6ee7f69-41e5-4cce-9d6f-5e1901002515" config-ref="Salesforce_Config" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce">
 			<salesforce:salesforce-query>SELECT AccountNumber, AccountSource, AnnualRevenue, BillingCity, BillingCountry, BillingPostalCode, BillingState, BillingStreet, Description, Fax, Id, Industry, LastModifiedById, LastModifiedDate, Name, NumberOfEmployees, OwnerId, Ownership, ParentId, Phone, Rating, ShippingCity, ShippingCountry, ShippingPostalCode, ShippingState, ShippingStreet, Sic, SicDesc, Site, TickerSymbol, Type, Website FROM Account WHERE LastModifiedDate &gt; :lastModifiedDate AND LastModifiedById != '${sfdc.integration.user.id}' ORDER BY LastModifiedDate ASC LIMIT 100</salesforce:salesforce-query>&#13;
