@@ -80,7 +80,7 @@ http://www.mulesoft.org/schema/mule/microsoft-dynamics-crm http://www.mulesoft.o
 			xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
 			doc:name="Retrieve lastQueryDateSfdc" objectStore="Object_store"
 			xmlns:os="http://www.mulesoft.org/schema/mule/os">&#13;
-        	<os:default-value><![CDATA[${sfdc.watermark.default.expression}]]></os:default-value>&#13;
+        	<os:default-value><![CDATA[#[read(p('.sfdcwatermark.default.expression'))]]]></os:default-value>&#13;
     	</os:retrieve>
 		<salesforce:query xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" doc:name="Query Accounts from Salesforce" doc:id="b6ee7f69-41e5-4cce-9d6f-5e1901002515" config-ref="Salesforce_Config" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce">
 			<salesforce:salesforce-query>SELECT AccountNumber, AccountSource, AnnualRevenue, BillingCity, BillingCountry, BillingPostalCode, BillingState, BillingStreet, Description, Fax, Id, Industry, LastModifiedById, LastModifiedDate, Name, NumberOfEmployees, OwnerId, Ownership, ParentId, Phone, Rating, ShippingCity, ShippingCountry, ShippingPostalCode, ShippingState, ShippingStreet, Sic, SicDesc, Site, TickerSymbol, Type, Website FROM Account WHERE LastModifiedDate &gt; :lastModifiedDate AND LastModifiedById != '${sfdc.integration.user.id}' ORDER BY LastModifiedDate ASC LIMIT 100</salesforce:salesforce-query>&#13;
@@ -108,7 +108,7 @@ max(payload map $.LastModifiedDate)]]></ee:set-variable>
 </flow>
 <flow name="queryDynamicsCrmFlow">
 		<os:retrieve doc:name="Retrieve lastQueryDateMsDyn" doc:id="93f3f01c-ffa9-4ea4-a1ad-20142224ec9a" key="watermark" objectStore="Object_store" target="lastQueryDateMsDyn">
-			<os:default-value><![CDATA[${msdyn.watermark.default.expression}]]></os:default-value>
+			<os:default-value ><![CDATA[#[read(p('msdyn.watermark.default.expression'))]]]></os:default-value>
 		</os:retrieve>
 		<set-variable value="${msdyn.integration.user.id}" doc:name="Set integrationUserID" doc:id="6ac83e6e-45d6-474f-8988-aff0fa7c8e6e" variableName="integrationUserID"/>
 		<ee:transform doc:name="Prepare query" doc:id="3e86c1d1-077f-455b-a608-da950c75e677">
